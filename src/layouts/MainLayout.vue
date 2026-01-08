@@ -4,18 +4,34 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
 
-        <q-toolbar-title> Quasar App </q-toolbar-title>
-
-        <div>Quasar v{{ $q.version }}</div>
+        <q-toolbar-title> Smart Home Manager </q-toolbar-title>
       </q-toolbar>
     </q-header>
 
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
-      <q-list>
-        <q-item-label header> Essential Links </q-item-label>
+      <q-item-label header> Seiten </q-item-label>
+      <EssentialLink
+        title="Dashboard"
+        caption="Übersicht deiner Haushalte, Räume und Geräte"
+        icon="home"
+        link="/dashboard"
+      />
+      <EssentialLink
+        title="Profil"
+        caption="Deine Informationen und Einstellungen"
+        icon="account_circle"
+        link="/profile"
+      />
 
-        <EssentialLink v-for="link in linksList" :key="link.title" v-bind="link" />
-      </q-list>
+      <q-item clickable @click="logout">
+        <q-item-section avatar>
+          <q-icon name="exit_to_app" />
+        </q-item-section>
+
+        <q-item-section>
+          <q-item-label>Abmelden</q-item-label>
+        </q-item-section>
+      </q-item>
     </q-drawer>
 
     <q-page-container>
@@ -27,55 +43,19 @@
 <script setup>
 import { ref } from 'vue'
 import EssentialLink from 'components/EssentialLink.vue'
-
-const linksList = [
-  {
-    title: 'Docs',
-    caption: 'quasar.dev',
-    icon: 'school',
-    link: 'https://quasar.dev',
-  },
-  {
-    title: 'Github',
-    caption: 'github.com/quasarframework',
-    icon: 'code',
-    link: 'https://github.com/quasarframework',
-  },
-  {
-    title: 'Discord Chat Channel',
-    caption: 'chat.quasar.dev',
-    icon: 'chat',
-    link: 'https://chat.quasar.dev',
-  },
-  {
-    title: 'Forum',
-    caption: 'forum.quasar.dev',
-    icon: 'record_voice_over',
-    link: 'https://forum.quasar.dev',
-  },
-  {
-    title: 'Twitter',
-    caption: '@quasarframework',
-    icon: 'rss_feed',
-    link: 'https://twitter.quasar.dev',
-  },
-  {
-    title: 'Facebook',
-    caption: '@QuasarFramework',
-    icon: 'public',
-    link: 'https://facebook.quasar.dev',
-  },
-  {
-    title: 'Quasar Awesome',
-    caption: 'Community Quasar projects',
-    icon: 'favorite',
-    link: 'https://awesome.quasar.dev',
-  },
-]
+import { useUserStore } from 'src/stores/user-store'
+import { useRouter } from 'vue-router'
 
 const leftDrawerOpen = ref(false)
+const userStore = useUserStore()
+const router = useRouter()
 
 function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value
+}
+
+const logout = () => {
+  userStore.logout()
+  router.push('/')
 }
 </script>
