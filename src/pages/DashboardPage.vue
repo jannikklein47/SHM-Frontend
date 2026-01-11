@@ -460,9 +460,9 @@ const openEditDevice = (device) => {
 }
 
 const updateDevice = async () => {
-  if (!editDeviceData.value.name) return
+  if (!editDeviceData.value.name || !editDeviceData.value.name.trim()) return
   try {
-    await api.patch(`/geraet/${editDeviceData.value.id}`, { name: editDeviceData.value.name })
+    await api.patch(`/geraet/${editDeviceData.value.id}`, { name: editDeviceData.value.name.trim() })
     showEditDeviceDialog.value = false
     $q.notify({ color: 'positive', message: 'Gerät umbenannt', icon: 'check' })
     fetchDashboardData()
