@@ -107,7 +107,7 @@
                               icon="edit"
                               @click.stop="openEditDevice(device)"
                             >
-                              <q-tooltip>Rename Device</q-tooltip>
+                              <q-tooltip>Gerät umbenennen</q-tooltip>
                             </q-btn>
                             <q-icon name="chevron_right" />
                           </div>
@@ -169,11 +169,11 @@
 
     <q-dialog v-model="showEditDeviceDialog">
       <q-card style="min-width: 350px">
-        <q-card-section><div class="text-h6">Rename Device</div></q-card-section>
+        <q-card-section><div class="text-h6">Gerät umbenennen</div></q-card-section>
         <q-card-section class="q-pt-none">
           <q-input
             v-model="editDeviceData.name"
-            label="New Name"
+            label="Neuer Name"
             outlined
             dense
             autofocus
@@ -181,8 +181,8 @@
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="orange" label="Save Changes" @click="updateDevice" />
+          <q-btn flat label="Abbrechen" v-close-popup />
+          <q-btn color="orange" label="Änderungen speichern" @click="updateDevice" />
         </q-card-actions>
       </q-card>
     </q-dialog>
