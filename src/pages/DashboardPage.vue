@@ -36,6 +36,10 @@
 
           <q-item-section side>
             <div class="row q-gutter-xs">
+              <q-btn flat round color="orange" icon="edit" @click.stop="openEditHouse(house)">
+                <q-tooltip>Rename Household</q-tooltip>
+              </q-btn>
+
               <q-btn flat round color="grey-7" icon="group" @click.stop="openMemberList(house)">
                 <q-tooltip>View Access/Permissions</q-tooltip>
               </q-btn>
@@ -128,6 +132,26 @@
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />
           <q-btn color="primary" label="Create" @click="createHouse" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="showEditHouseDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section><div class="text-h6">Rename Household</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-input
+            v-model="editHouseData.name"
+            label="New Name"
+            outlined
+            dense
+            autofocus
+            @keyup.enter="updateHouse"
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn color="orange" label="Save Changes" @click="updateHouse" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -310,6 +334,9 @@ const loading = ref(true)
 const showAddHouse = ref(false)
 const newHouseData = ref({ name: '', adresse: '' })
 
+const showEditHouseDialog = ref(false)
+const editHouseData = ref({ id: null, name: '' })
+
 const showAddRoom = ref(false)
 const targetHouseId = ref(null)
 const newRoomData = ref({ name: '', raum_typ_id: null })
@@ -370,6 +397,24 @@ const createHouse = async () => {
     showAddHouse.value = false
     newHouseData.value = { name: '', adresse: '' }
     fetchDashboardData() // Refresh
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const openEditHouse = (house) => {
+  editHouseData.value = { id: house.id, name: house.name }
+  showEditHouseDialog.value = true
+}
+
+const updateHouse = async () => {
+  console.log('Updating house:', editHouseData.value)
+  if (!editHouseData.value.name) return
+  try {
+    await api.patch(`/haushalt/${editHouseData.value.id}`, { name: editHouseData.value.name })
+    showEditHouseDialog.value = false
+    $q.notify({ color: 'positive', message: 'Haushalt umbenannt', icon: 'check' })
+    fetchDashboardData()
   } catch (err) {
     console.error(err)
   }
