@@ -12,13 +12,13 @@
       <q-item-label header> Seiten </q-item-label>
       <EssentialLink
         title="Dashboard"
-        caption="Übersicht deiner Haushalte, Räume und Geräte"
+        caption="Overview on Households, Rooms and Devices"
         icon="home"
         link="/dashboard"
       />
       <EssentialLink
         title="Profil"
-        caption="Deine Informationen und Einstellungen"
+        caption="Your Information and Settings"
         icon="account_circle"
         link="/profile"
       />
@@ -29,7 +29,7 @@
         </q-item-section>
 
         <q-item-section>
-          <q-item-label>Abmelden</q-item-label>
+          <q-item-label>Logout</q-item-label>
         </q-item-section>
       </q-item>
     </q-drawer>
