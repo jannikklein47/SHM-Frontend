@@ -87,19 +87,30 @@
                       <q-item
                         v-for="device in room.devices"
                         :key="device.id"
-                        clickable
-                        @click="goToDevice(device.id)"
                         class="rounded-borders q-my-xs bg-grey-1"
                       >
                         <q-item-section avatar>
                           <q-icon name="sensors" color="accent" />
                         </q-item-section>
-                        <q-item-section>
+                        <q-item-section clickable @click="goToDevice(device.id)">
                           <q-item-label>{{ device.name }}</q-item-label>
                           <q-item-label caption>{{ device.schnittstelle }}</q-item-label>
                         </q-item-section>
                         <q-item-section side>
-                          <q-icon name="chevron_right" />
+                          <div class="row items-center q-gutter-xs">
+                            <q-btn
+                              flat
+                              round
+                              dense
+                              size="sm"
+                              color="orange"
+                              icon="edit"
+                              @click.stop="openEditDevice(device)"
+                            >
+                              <q-tooltip>Gerät umbenennen</q-tooltip>
+                            </q-btn>
+                            <q-icon name="chevron_right" />
+                          </div>
                         </q-item-section>
                       </q-item>
                     </q-list>
@@ -152,6 +163,26 @@
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />
           <q-btn color="orange" label="Save Changes" @click="updateHouse" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="showEditDeviceDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section><div class="text-h6">Gerät umbenennen</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-input
+            v-model="editDeviceData.name"
+            label="Neuer Name"
+            outlined
+            dense
+            autofocus
+            @keyup.enter="updateDevice"
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Abbrechen" v-close-popup />
+          <q-btn color="orange" label="Änderungen speichern" @click="updateDevice" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -337,6 +368,9 @@ const newHouseData = ref({ name: '', adresse: '' })
 const showEditHouseDialog = ref(false)
 const editHouseData = ref({ id: null, name: '' })
 
+const showEditDeviceDialog = ref(false)
+const editDeviceData = ref({ id: null, name: '' })
+
 const showAddRoom = ref(false)
 const targetHouseId = ref(null)
 const newRoomData = ref({ name: '', raum_typ_id: null })
@@ -417,6 +451,24 @@ const updateHouse = async () => {
     fetchDashboardData()
   } catch (err) {
     console.error(err)
+  }
+}
+
+const openEditDevice = (device) => {
+  editDeviceData.value = { id: device.id, name: device.name }
+  showEditDeviceDialog.value = true
+}
+
+const updateDevice = async () => {
+  if (!editDeviceData.value.name || !editDeviceData.value.name.trim()) return
+  try {
+    await api.patch(`/geraet/${editDeviceData.value.id}`, { name: editDeviceData.value.name.trim() })
+    showEditDeviceDialog.value = false
+    $q.notify({ color: 'positive', message: 'Gerät umbenannt', icon: 'check' })
+    fetchDashboardData()
+  } catch (err) {
+    console.error(err)
+    $q.notify({ color: 'negative', message: 'Fehler beim Umbenennen', icon: 'error' })
   }
 }
 
