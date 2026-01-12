@@ -17,7 +17,7 @@
         link="/dashboard"
       />
       <EssentialLink
-        title="Profil"
+        title="Profile"
         caption="Your Information and Settings"
         icon="account_circle"
         link="/profile"

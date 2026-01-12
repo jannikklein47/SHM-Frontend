@@ -1,10 +1,5 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row items-center justify-between q-mb-xl">
-      <div class="text-h4">My Households</div>
-      <q-btn color="primary" icon="add" label="New House" no-caps @click="showAddHouse = true" />
-    </div>
-
     <div v-if="loading" class="flex flex-center">
       <q-spinner size="3em" color="primary" />
     </div>
@@ -183,6 +178,15 @@
         </q-dialog>
       </q-expansion-item>
     </div>
+
+    <q-btn
+      color="primary"
+      icon="add"
+      label="New House"
+      class="q-mt-md"
+      no-caps
+      @click="showAddHouse = true"
+    />
 
     <q-dialog v-model="showAddHouse">
       <q-card style="min-width: 350px">
