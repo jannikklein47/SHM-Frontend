@@ -36,18 +36,12 @@
 
           <q-item-section side>
             <div class="row q-gutter-xs">
-              <q-btn flat round color="grey-7" icon="group" @click.stop="openMemberList(house)">
-                <q-tooltip>View Access/Permissions</q-tooltip>
+              <q-btn flat round color="secondary" icon="edit" @click.stop="openEditHouse(house)">
+                <q-tooltip>Rename Household</q-tooltip>
               </q-btn>
 
-              <q-btn
-                flat
-                round
-                color="primary"
-                icon="person_add"
-                @click.stop="openInviteDialog(house.id)"
-              >
-                <q-tooltip>Invite User</q-tooltip>
+              <q-btn flat round color="grey-7" icon="group" @click.stop="openMemberList(house)">
+                <q-tooltip>Manage Members</q-tooltip>
               </q-btn>
             </div>
           </q-item-section>
@@ -70,8 +64,20 @@
             <div class="row q-col-gutter-md">
               <div v-for="room in house.rooms" :key="room.id" class="col-12 col-md-6 col-lg-4">
                 <q-card bordered class="my-card" flat>
-                  <q-card-section class="bg-primary text-white q-py-sm">
+                  <q-card-section class="bg-primary text-white q-py-sm flex justify-between">
                     <div class="text-subtitle1">{{ room.name }}</div>
+
+                    <q-btn
+                      flat
+                      round
+                      color="white"
+                      icon="edit"
+                      size="sm"
+                      style="background-color: #ffffff20"
+                      @click.stop="openEditRoom(room)"
+                    >
+                      <q-tooltip>Rename Room</q-tooltip>
+                    </q-btn>
                   </q-card-section>
 
                   <q-card-section>
@@ -81,10 +87,10 @@
 
                     <q-list dense>
                       <q-item
+                        @click="goToDevice(device.id)"
+                        clickable
                         v-for="device in room.devices"
                         :key="device.id"
-                        clickable
-                        @click="goToDevice(device.id)"
                         class="rounded-borders q-my-xs bg-grey-1"
                       >
                         <q-item-section avatar>
@@ -95,7 +101,20 @@
                           <q-item-label caption>{{ device.schnittstelle }}</q-item-label>
                         </q-item-section>
                         <q-item-section side>
-                          <q-icon name="chevron_right" />
+                          <div class="row items-center q-gutter-xs">
+                            <q-btn
+                              flat
+                              round
+                              dense
+                              size="sm"
+                              color="secondary"
+                              icon="edit"
+                              @click.stop="openEditDevice(device)"
+                            >
+                              <q-tooltip>Rename Device</q-tooltip>
+                            </q-btn>
+                            <q-icon name="chevron_right" />
+                          </div>
                         </q-item-section>
                       </q-item>
                     </q-list>
@@ -115,6 +134,53 @@
             </div>
           </q-card-section>
         </q-card>
+
+        <q-dialog v-model="showMemberList">
+          <q-card style="min-width: 400px">
+            <q-card-section class="row items-center q-pb-none">
+              <div class="text-h6">Members: {{ currentViewingHouseName }}</div>
+              <q-space />
+              <q-btn icon="close" flat round dense v-close-popup />
+            </q-card-section>
+
+            <q-card-section>
+              <q-list bordered separator class="rounded-borders">
+                <q-item v-for="member in householdMembers" :key="member.id">
+                  <q-item-section avatar>
+                    <q-avatar color="grey-3" text-color="primary" icon="person" />
+                  </q-item-section>
+
+                  <q-item-section>
+                    <q-item-label>{{ member.vorname }} {{ member.nachname }}</q-item-label>
+                    <q-item-label caption>Permission Level</q-item-label>
+                  </q-item-section>
+
+                  <q-item-section side>
+                    <q-badge
+                      :color="member.verwaltet ? 'negative' : 'blue'"
+                      :label="member.verwaltet ? 'Admin' : 'Member'"
+                    />
+                  </q-item-section>
+                </q-item>
+
+                <q-item clickable @click="openInviteDialog(house.id)">
+                  <q-item-section avatar
+                    ><q-avatar color="grey-3" text-color="secondary" icon="person_add"
+                  /></q-item-section>
+                  <q-item-section>Invite a user to this Household</q-item-section>
+                </q-item>
+
+                <q-item v-if="householdMembers.length === 0">
+                  <q-item-section class="text-grey italic">No access data found.</q-item-section>
+                </q-item>
+              </q-list>
+            </q-card-section>
+
+            <q-card-actions align="right">
+              <q-btn flat label="Close" color="primary" v-close-popup />
+            </q-card-actions>
+          </q-card>
+        </q-dialog>
       </q-expansion-item>
     </div>
 
@@ -128,6 +194,66 @@
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />
           <q-btn color="primary" label="Create" @click="createHouse" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="showEditHouseDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section><div class="text-h6">Rename Household</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-input
+            v-model="editHouseData.name"
+            label="New Name"
+            outlined
+            dense
+            autofocus
+            @keyup.enter="updateHouse"
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn color="secondary" label="Save Changes" @click="updateHouse" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="showEditRoomDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section><div class="text-h6">Rename Room</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-input
+            v-model="editRoomData.name"
+            label="New Name"
+            outlined
+            dense
+            autofocus
+            @keyup.enter="updateRoom"
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn color="secondary" label="Save Changes" @click="updateRoom" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="showEditDeviceDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section><div class="text-h6">Rename Device</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-input
+            v-model="editDeviceData.name"
+            label="Neuer Name"
+            outlined
+            dense
+            autofocus
+            @keyup.enter="updateDevice"
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Abbrechen" v-close-popup />
+          <q-btn color="secondary" label="Änderungen speichern" @click="updateDevice" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -195,7 +321,7 @@
         <q-card-actions align="right" class="q-pb-md q-pr-md">
           <q-btn flat label="Cancel" v-close-popup />
           <q-btn
-            color="orange"
+            color="secondary"
             label="Add Device"
             @click="createDevice"
             :disable="!newDeviceData.name || !newDeviceData.geraet_typ_id"
@@ -248,46 +374,6 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-
-    <q-dialog v-model="showMemberList">
-      <q-card style="min-width: 400px">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Members: {{ currentViewingHouseName }}</div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup />
-        </q-card-section>
-
-        <q-card-section>
-          <q-list bordered separator class="rounded-borders">
-            <q-item v-for="member in householdMembers" :key="member.id">
-              <q-item-section avatar>
-                <q-avatar color="grey-3" text-color="primary" icon="person" />
-              </q-item-section>
-
-              <q-item-section>
-                <q-item-label>{{ member.vorname }} {{ member.nachname }}</q-item-label>
-                <q-item-label caption>Permission Level</q-item-label>
-              </q-item-section>
-
-              <q-item-section side>
-                <q-badge
-                  :color="member.verwaltet ? 'negative' : 'blue'"
-                  :label="member.verwaltet ? 'Admin' : 'Member'"
-                />
-              </q-item-section>
-            </q-item>
-
-            <q-item v-if="householdMembers.length === 0">
-              <q-item-section class="text-grey italic">No access data found.</q-item-section>
-            </q-item>
-          </q-list>
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat label="Close" color="primary" v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </q-page>
 </template>
 
@@ -309,6 +395,15 @@ const loading = ref(true)
 // Dialog Controls
 const showAddHouse = ref(false)
 const newHouseData = ref({ name: '', adresse: '' })
+
+const showEditHouseDialog = ref(false)
+const editHouseData = ref({ id: null, name: '' })
+
+const showEditRoomDialog = ref(false)
+const editRoomData = ref({ id: null, name: '' })
+
+const showEditDeviceDialog = ref(false)
+const editDeviceData = ref({ id: null, name: '' })
 
 const showAddRoom = ref(false)
 const targetHouseId = ref(null)
@@ -372,6 +467,62 @@ const createHouse = async () => {
     fetchDashboardData() // Refresh
   } catch (err) {
     console.error(err)
+  }
+}
+
+const openEditHouse = (house) => {
+  editHouseData.value = { id: house.id, name: house.name }
+  showEditHouseDialog.value = true
+}
+
+const updateHouse = async () => {
+  console.log('Updating house:', editHouseData.value)
+  if (!editHouseData.value.name) return
+  try {
+    await api.patch(`/haushalt/${editHouseData.value.id}`, { name: editHouseData.value.name })
+    showEditHouseDialog.value = false
+    $q.notify({ color: 'positive', message: 'Household renamed.', icon: 'check' })
+    fetchDashboardData()
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const openEditRoom = (room) => {
+  editRoomData.value = { id: room.id, name: room.name }
+  showEditRoomDialog.value = true
+}
+
+const updateRoom = async () => {
+  console.log('Updating Room:', editRoomData.value)
+  if (!editRoomData.value.name) return
+  try {
+    await api.patch(`/raum/${editRoomData.value.id}`, { name: editRoomData.value.name })
+    showEditRoomDialog.value = false
+    $q.notify({ color: 'positive', message: 'Room renamed.', icon: 'check' })
+    fetchDashboardData()
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const openEditDevice = (device) => {
+  editDeviceData.value = { id: device.id, name: device.name }
+  showEditDeviceDialog.value = true
+}
+
+const updateDevice = async () => {
+  if (!editDeviceData.value.name || !editDeviceData.value.name.trim()) return
+  try {
+    await api.patch(`/geraet/${editDeviceData.value.id}`, {
+      name: editDeviceData.value.name.trim(),
+    })
+    showEditDeviceDialog.value = false
+    $q.notify({ color: 'positive', message: 'Device renamed.', icon: 'check' })
+    fetchDashboardData()
+  } catch (err) {
+    console.error(err)
+    $q.notify({ color: 'negative', message: 'An unexpected error occured.', icon: 'error' })
   }
 }
 
