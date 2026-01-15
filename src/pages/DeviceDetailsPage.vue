@@ -2,7 +2,7 @@
   <q-page class="q-pa-md">
     <q-btn flat icon="arrow_back" label="Back to Dashboard" to="/dashboard" class="q-mb-md" />
 
-    <div class="text-h4 q-mb-md">Device Details</div>
+    <device-detail :device="device" :sensors="sensors" @updated="loadDeviceData" />
 
     <div v-if="loading" class="flex flex-center">
       <q-spinner color="primary" size="3em" />
@@ -12,8 +12,7 @@
       <div class="col-12">
         <div class="q-mt-xl">
           <div class="text-h5 q-mb-md">Operation History</div>
-
-          <q-card bordered class="shadow-1">
+          <q-card bordered flat>
             <q-table
               flat
               :rows="switchingLogs"
@@ -54,63 +53,67 @@
             </div>
           </q-card>
         </div>
-        <div class="text-h6 q-mt-xl">Installed Sensors</div>
-        <q-card v-for="sensor in sensors" :key="sensor.id" class="q-my-lg shadow-2">
-          <q-card-section class="bg-primary text-white">
-            <div class="text-h6">{{ getSensorTypeName(sensor.sensor_typ_id) }}</div>
-            <div class="text-caption">Sensor ID: {{ sensor.id }}</div>
-          </q-card-section>
+        <div class="q-mt-xl">
+          <div class="text-h5 q-mb-md">Installed Sensors</div>
+          <q-card v-for="sensor in sensors" :key="sensor.id" class="q-my-lg" flat bordered>
+            <q-card-section class="bg-secondary text-white">
+              <div class="row items-center justify-between">
+                <span class="text-h6"> {{ getSensorTypeName(sensor.sensor_typ_id) }}</span>
+                <span class="text-caption">Sensor ID: {{ sensor.id }}</span>
+              </div>
+            </q-card-section>
 
-          <q-card-section>
-            <q-table
-              flat
-              bordered
-              :rows="sensor.measurements"
-              :columns="[
-                {
-                  name: 'time',
-                  label: 'Timestamp',
-                  field: 'zeitpunkt',
-                  align: 'left',
-                  format: (val) => formatDate(val),
-                },
-                { name: 'val', label: 'Value', field: 'wert', align: 'right' },
-                { name: 'limit', label: 'Threshold', field: 'schwellenwert', align: 'right' },
-                { name: 'diff', label: 'Status', align: 'center' },
-              ]"
-              row-key="id"
-              :pagination="{ rowsPerPage: 10 }"
-            >
-              <template v-slot:body-cell-diff="props">
-                <q-td :props="props">
-                  <q-icon
-                    v-if="parseFloat(props.row.wert) >= parseFloat(props.row.schwellenwert)"
-                    name="trending_up"
-                    color="negative"
-                    size="sm"
-                  >
-                    <q-tooltip>Above Threshold</q-tooltip>
-                  </q-icon>
-                  <q-icon v-else name="check_circle" color="positive" size="sm" />
-                </q-td>
-              </template>
+            <q-card-section>
+              <q-table
+                flat
+                bordered
+                :rows="sensor.measurements"
+                :columns="[
+                  {
+                    name: 'time',
+                    label: 'Timestamp',
+                    field: 'zeitpunkt',
+                    align: 'left',
+                    format: (val) => formatDate(val),
+                  },
+                  { name: 'val', label: 'Value', field: 'wert', align: 'right' },
+                  { name: 'limit', label: 'Threshold', field: 'schwellenwert', align: 'right' },
+                  { name: 'diff', label: 'Status', align: 'center' },
+                ]"
+                row-key="id"
+                :pagination="{ rowsPerPage: 10 }"
+              >
+                <template v-slot:body-cell-diff="props">
+                  <q-td :props="props">
+                    <q-icon
+                      v-if="parseFloat(props.row.wert) >= parseFloat(props.row.schwellenwert)"
+                      name="error"
+                      color="negative"
+                      size="sm"
+                    >
+                      <q-tooltip>Above Threshold</q-tooltip>
+                    </q-icon>
+                    <q-icon v-else name="check_circle" color="positive" size="sm" />
+                  </q-td>
+                </template>
 
-              <template v-slot:body-cell-val="props">
-                <q-td :props="props">
-                  <div
-                    :class="
-                      parseFloat(props.value) > parseFloat(props.row.schwellenwert)
-                        ? 'text-red text-bold'
-                        : ''
-                    "
-                  >
-                    {{ props.value }}
-                  </div>
-                </q-td>
-              </template>
-            </q-table>
-          </q-card-section>
-        </q-card>
+                <template v-slot:body-cell-val="props">
+                  <q-td :props="props">
+                    <div
+                      :class="
+                        parseFloat(props.value) > parseFloat(props.row.schwellenwert)
+                          ? 'text-red text-bold'
+                          : ''
+                      "
+                    >
+                      {{ props.value }}
+                    </div>
+                  </q-td>
+                </template>
+              </q-table>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
 
       <div v-if="sensors.length === 0" class="col-12 text-grey">
@@ -126,6 +129,7 @@ import { useRoute } from 'vue-router'
 import { api } from 'boot/axios'
 
 import { date } from 'quasar'
+import DeviceDetail from 'src/components/DeviceDetail.vue'
 
 const formatDate = (val) => {
   if (!val) return '-'
@@ -137,6 +141,8 @@ const route = useRoute()
 const loading = ref(true)
 const sensors = ref([])
 const sensorTypes = ref([])
+
+const device = ref({})
 
 // Helper to resolve Type Name
 const getSensorTypeName = (id) => {
@@ -169,6 +175,10 @@ const loadDeviceData = async () => {
     // 3. Load Switching Processes for the Device
     const schaltRes = await api.get(`/schaltvorgaenge/${route.params.id}`)
     switchingLogs.value = schaltRes.data
+
+    // 4. Load the Device
+    const deviceRes = await api.get(`/geraetId/${route.params.id}`)
+    device.value = deviceRes.data
   } catch (err) {
     console.error('Error loading device full data', err)
   } finally {
