@@ -31,6 +31,9 @@
 
           <q-item-section side>
             <div class="row q-gutter-xs">
+              <q-btn flat round color="negative" icon="delete" @click.stop="openDeleteHouse(house)">
+                <q-tooltip>Delete Household</q-tooltip>
+              </q-btn>
               <q-btn flat round color="secondary" icon="edit" @click.stop="openEditHouse(house)">
                 <q-tooltip>Rename Household</q-tooltip>
               </q-btn>
@@ -235,6 +238,21 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="showDeleteHouseDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section><div class="text-h6">Delete Household</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          Do you really want to delete this household? All its information, including rooms,
+          devices, sensors, operation history and other data will be unrecoverably deleted. This
+          cannot be undone.
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn color="negative" label="Delete permanently" @click="deleteHouse" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="showEditRoomDialog">
       <q-card style="min-width: 350px">
         <q-card-section><div class="text-h6">Rename Room</div></q-card-section>
@@ -430,6 +448,9 @@ const newHouseData = ref({ name: '', adresse: '' })
 const showEditHouseDialog = ref(false)
 const editHouseData = ref({ id: null, name: '' })
 
+const showDeleteHouseDialog = ref(false)
+const deleteHouseData = ref({ id: null, name: '' })
+
 const showEditRoomDialog = ref(false)
 const editRoomData = ref({ id: null, name: '' })
 
@@ -515,6 +536,22 @@ const updateHouse = async () => {
   try {
     await api.patch(`/haushalt/${editHouseData.value.id}`, { name: editHouseData.value.name })
     showEditHouseDialog.value = false
+    $q.notify({ color: 'positive', message: 'Household renamed.', icon: 'check' })
+    fetchDashboardData()
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const openDeleteHouse = (house) => {
+  deleteHouseData.value = { id: house.id, name: house.name }
+  showDeleteHouseDialog.value = true
+}
+
+const deleteHouse = async () => {
+  try {
+    await api.delete(`/haushalt/${deleteHouseData.value.id}`)
+    showDeleteHouseDialog.value = false
     $q.notify({ color: 'positive', message: 'Household renamed.', icon: 'check' })
     fetchDashboardData()
   } catch (err) {
