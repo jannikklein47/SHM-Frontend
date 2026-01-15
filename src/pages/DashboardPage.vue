@@ -610,7 +610,11 @@ const openInviteDialog = async (houseId) => {
   try {
     const res = await api.get('/nutzer')
     // Filter out the current user so they don't invite themselves
-    allUsers.value = res.data.filter((u) => u.id !== userStore.currentUser.id)
+    allUsers.value = res.data.filter(
+      (u) =>
+        u.id !== userStore.currentUser.id &&
+        !householdMembers.value.map((u) => u.id).includes(u.id),
+    )
   } catch (err) {
     console.error('Error fetching users for invitation', err)
   }
