@@ -59,9 +59,9 @@
             <div class="row q-col-gutter-md">
               <div v-for="room in house.rooms" :key="room.id" class="col-12 col-md-6 col-lg-4">
                 <q-card bordered class="my-card" flat>
-                  <q-card-section class="bg-primary text-white q-py-sm flex justify-between">
+                  <q-card-section class="bg-primary text-white q-py-sm flex">
                     <div class="text-subtitle1">{{ room.name }}</div>
-
+                    <q-space />
                     <q-btn
                       flat
                       round
@@ -69,7 +69,20 @@
                       icon="edit"
                       size="sm"
                       style="background-color: #ffffff20"
+                      class="q-mr-sm"
                       @click.stop="openEditRoom(room)"
+                    >
+                      <q-tooltip>Rename Room</q-tooltip>
+                    </q-btn>
+
+                    <q-btn
+                      flat
+                      round
+                      color="negative"
+                      icon="delete"
+                      size="sm"
+                      style="background-color: #ff888820"
+                      @click.stop="openDeleteRoom(room)"
                     >
                       <q-tooltip>Rename Room</q-tooltip>
                     </q-btn>
@@ -242,6 +255,20 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="showDeleteRoomDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section><div class="text-h6">Delete Room</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          Do you really want to delete this room? All its information, including devices, sensors,
+          operation history and other data will be deleted.
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn color="negative" label="Delete" @click="deleteRoom" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="showEditDeviceDialog">
       <q-card style="min-width: 350px">
         <q-card-section><div class="text-h6">Rename Device</div></q-card-section>
@@ -406,6 +433,9 @@ const editHouseData = ref({ id: null, name: '' })
 const showEditRoomDialog = ref(false)
 const editRoomData = ref({ id: null, name: '' })
 
+const showDeleteRoomDialog = ref(false)
+const deleteRoomData = ref({ id: null, name: '' })
+
 const showEditDeviceDialog = ref(false)
 const editDeviceData = ref({ id: null, name: '' })
 
@@ -504,6 +534,22 @@ const updateRoom = async () => {
     await api.patch(`/raum/${editRoomData.value.id}`, { name: editRoomData.value.name })
     showEditRoomDialog.value = false
     $q.notify({ color: 'positive', message: 'Room renamed.', icon: 'check' })
+    fetchDashboardData()
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const openDeleteRoom = (room) => {
+  deleteRoomData.value = { id: room.id, name: room.name }
+  showDeleteRoomDialog.value = true
+}
+
+const deleteRoom = async () => {
+  try {
+    await api.delete(`/raum/${deleteRoomData.value.id}`)
+    showDeleteRoomDialog.value = false
+    $q.notify({ color: 'positive', message: 'Room deleted.', icon: 'check' })
     fetchDashboardData()
   } catch (err) {
     console.error(err)
