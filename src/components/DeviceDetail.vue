@@ -21,6 +21,18 @@
         >
           <q-tooltip>Rename Device</q-tooltip>
         </q-btn>
+
+        <q-btn
+          flat
+          round
+          dense
+          size="md"
+          color="negative"
+          icon="delete"
+          @click.stop="openDeleteDevice(device)"
+        >
+          <q-tooltip>Rename Device</q-tooltip>
+        </q-btn>
       </div>
     </q-card-section>
 
@@ -87,7 +99,7 @@
       <q-card-section class="q-pt-none">
         <q-input
           v-model="editDeviceData.name"
-          label="Neuer Name"
+          label="New Name"
           outlined
           dense
           autofocus
@@ -95,8 +107,22 @@
         />
       </q-card-section>
       <q-card-actions align="right">
-        <q-btn flat label="Abbrechen" v-close-popup />
-        <q-btn color="secondary" label="Änderungen speichern" @click="updateDevice" />
+        <q-btn flat label="Cancel" v-close-popup />
+        <q-btn color="secondary" label="Save new name" @click="updateDevice" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
+  <q-dialog v-model="showDeleteDeviceDialog">
+    <q-card style="min-width: 350px">
+      <q-card-section><div class="text-h6">Delete Device</div></q-card-section>
+      <q-card-section class="q-pt-none">
+        Do you really want to delete this device? All its information, including sensors, operation
+        history and other data will be deleted.
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat label="Cancel" v-close-popup />
+        <q-btn color="negative" label="Delete" @click="deleteDevice" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -109,6 +135,9 @@ import { date, useQuasar } from 'quasar'
 
 const showEditDeviceDialog = ref(false)
 const editDeviceData = ref({ id: null, name: '' })
+
+const showDeleteDeviceDialog = ref(false)
+const deleteDeviceData = ref({ id: null, name: '' })
 
 const $q = useQuasar()
 
@@ -124,7 +153,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['updated'])
+const emit = defineEmits(['updated', 'deleted'])
 
 const deviceTypes = ref([])
 
@@ -164,6 +193,23 @@ const updateDevice = async () => {
     showEditDeviceDialog.value = false
     $q.notify({ color: 'positive', message: 'Device renamed.', icon: 'check' })
     emit('updated')
+  } catch (err) {
+    console.error(err)
+    $q.notify({ color: 'negative', message: 'An unexpected error occured.', icon: 'error' })
+  }
+}
+
+const openDeleteDevice = (device) => {
+  deleteDeviceData.value = { id: device.id, name: device.name }
+  showDeleteDeviceDialog.value = true
+}
+
+const deleteDevice = async () => {
+  try {
+    await api.delete(`/geraet/${deleteDeviceData.value.id}`)
+    showDeleteDeviceDialog.value = false
+    $q.notify({ color: 'positive', message: 'Device deleted.', icon: 'check' })
+    emit('deleted')
   } catch (err) {
     console.error(err)
     $q.notify({ color: 'negative', message: 'An unexpected error occured.', icon: 'error' })

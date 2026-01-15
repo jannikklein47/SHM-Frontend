@@ -2,7 +2,12 @@
   <q-page class="q-pa-md">
     <q-btn flat icon="arrow_back" label="Back to Dashboard" to="/dashboard" class="q-mb-md" />
 
-    <device-detail :device="device" :sensors="sensors" @updated="loadDeviceData" />
+    <device-detail
+      :device="device"
+      :sensors="sensors"
+      @updated="loadDeviceData"
+      @deleted="$router.back()"
+    />
 
     <div v-if="loading" class="flex flex-center">
       <q-spinner color="primary" size="3em" />
