@@ -171,9 +171,7 @@
                   </q-item-section>
 
                   <q-item-section>
-                    <q-item-label
-                      >{{ member.id }} {{ member.vorname }} {{ member.nachname }}</q-item-label
-                    >
+                    <q-item-label> {{ member.vorname }} {{ member.nachname }}</q-item-label>
                     <q-item-label caption>Permission Level</q-item-label>
                   </q-item-section>
 
@@ -223,6 +221,12 @@
       class="q-mt-md"
       no-caps
       @click="showAddHouse = true"
+    />
+
+    <q-btn
+      label="Delete account"
+      class="q-mt-md q-ml-md bg-negative text-white"
+      @click="openDeleteAccount"
     />
 
     <q-dialog v-model="showAddHouse">
@@ -278,9 +282,14 @@
       <q-card style="min-width: 350px">
         <q-card-section><div class="text-h6">Leave Household</div></q-card-section>
         <q-card-section class="q-pt-none">
-          Do you really want to leave this household? If you have not assigned another admin, no one
-          will be able to access the critical settings of this household. You can be re-invited by
-          an admin.
+          Do you really want to leave this household?
+          <span v-if="!leaveHouseData.onlyOneAdmin">You can be re-invited by an admin.</span>
+        </q-card-section>
+        <q-card-section>
+          <div v-if="leaveHouseData.onlyOneAdmin" class="text-bold text-negative">
+            You are the only admin of this household. Assign another admin before leaving or this
+            household will be deleted.
+          </div>
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />
@@ -459,6 +468,48 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <q-dialog v-model="showDeleteAccountDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section><div class="text-h6">Delete Account</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          Do you really want to delete your account? This cannot be undone.
+        </q-card-section>
+        <q-card-section>
+          The following houses do not have another admin. If you delete your account without
+          assigning another admin, these households will be permanently deleted.
+          <q-list bordered separator class="q-mt-md">
+            <q-item v-for="house in deleteAccountData.housesThatWillBeDeleted" :key="house.id">
+              <q-item-section>
+                <q-item-label>{{ house.name }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-item-label caption>{{ house.adresse }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn
+                  label="View Members"
+                  flat
+                  dense
+                  class="text-accent"
+                  v-close-popup
+                  @click="openMemberList(house)"
+                />
+              </q-item-section>
+            </q-item>
+            <q-item v-if="deleteAccountData.housesThatWillBeDeleted.length < 1">
+              <q-item-section align="center" class="text-grey-7">
+                No Households Affected
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn color="negative" label="Delete your account" @click="deleteAccount" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -488,7 +539,10 @@ const showDeleteHouseDialog = ref(false)
 const deleteHouseData = ref({ id: null, name: '' })
 
 const showLeaveHouseDialog = ref(false)
-const leaveHouseData = ref({ id: null, name: '' })
+const leaveHouseData = ref({ id: null, name: '', onlyOneAdmin: null })
+
+const showDeleteAccountDialog = ref(false)
+const deleteAccountData = ref({ housesThatWillBeDeleted: [] })
 
 const showEditRoomDialog = ref(false)
 const editRoomData = ref({ id: null, name: '' })
@@ -598,15 +652,22 @@ const deleteHouse = async () => {
   }
 }
 
-const openLeaveHouse = (house) => {
-  leaveHouseData.value = { id: house.id, name: house.name }
+const openLeaveHouse = async (house) => {
+  let onlyOneAdmin = false
+  const result = await api.get('/deleteAccount?nutzer_id=' + userStore.currentUser.id)
+  for (const houseWithOneAdmin of result.data) {
+    if (houseWithOneAdmin.id === house.id) {
+      onlyOneAdmin = true
+    }
+  }
+  leaveHouseData.value = { id: house.id, name: house.name, onlyOneAdmin }
   showLeaveHouseDialog.value = true
 }
 
 const leaveHouse = async () => {
   try {
     await api.delete(
-      `/haushaltzuordnung/${leaveHouseData.value.id}?nutzer_id=${userStore.currentUser.id}`,
+      `/haushaltzuordnung/${leaveHouseData.value.id}?nutzer_id=${userStore.currentUser.id}&deleteHouse=${leaveHouseData.value.onlyOneAdmin}`,
     )
     showLeaveHouseDialog.value = false
     $q.notify({ color: 'positive', message: 'Left household.', icon: 'check' })
@@ -780,6 +841,28 @@ const sendInvite = async () => {
     })
   } catch (err) {
     console.error('Error sending invite', err)
+  }
+}
+
+const openDeleteAccount = async () => {
+  try {
+    deleteAccountData.value.housesThatWillBeDeleted = (
+      await api.get('/deleteAccount?nutzer_id=' + userStore.currentUser.id)
+    ).data
+    showDeleteAccountDialog.value = true
+    console.log(deleteAccountData.value.housesThatWillBeDeleted)
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+const deleteAccount = async () => {
+  try {
+    await api.delete('/deleteAccount?nutzer_id=' + userStore.currentUser.id)
+    $q.notify({ type: 'positive', message: 'Account deleted successfully' })
+    userStore.logout()
+  } catch (error) {
+    console.error(error)
   }
 }
 
