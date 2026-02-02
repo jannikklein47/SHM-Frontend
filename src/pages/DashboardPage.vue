@@ -147,7 +147,7 @@
         </q-card>
 
         <q-dialog v-model="showMemberList">
-          <q-card style="min-width: 400px">
+          <q-card style="min-width: 500px">
             <q-card-section class="row items-center q-pb-none">
               <div class="text-h6">Members: {{ currentViewingHouseName }}</div>
               <q-space />
@@ -162,7 +162,9 @@
                   </q-item-section>
 
                   <q-item-section>
-                    <q-item-label>{{ member.vorname }} {{ member.nachname }}</q-item-label>
+                    <q-item-label
+                      >{{ member.id }} {{ member.vorname }} {{ member.nachname }}</q-item-label
+                    >
                     <q-item-label caption>Permission Level</q-item-label>
                   </q-item-section>
 
@@ -171,6 +173,16 @@
                       :color="member.verwaltet ? 'negative' : 'blue'"
                       :label="member.verwaltet ? 'Admin' : 'Member'"
                     />
+                  </q-item-section>
+                  <q-item-section side v-if="!member.verwaltet && member.id !== currentUser?.id">
+                    <q-btn
+                      icon="close"
+                      flat
+                      dense
+                      @click="removeFromHousehold(member.id, currentViewingHouseId)"
+                    >
+                      <q-tooltip class="text-body2">Remove from Household</q-tooltip>
+                    </q-btn>
                   </q-item-section>
                 </q-item>
 
@@ -427,7 +439,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { api } from 'boot/axios'
 import { useRouter } from 'vue-router'
 import { useUserStore } from 'stores/user-store'
@@ -464,6 +476,8 @@ const showAddRoom = ref(false)
 const targetHouseId = ref(null)
 const newRoomData = ref({ name: '', raum_typ_id: null })
 
+const currentUser = computed(() => userStore.currentUser)
+
 // Main Data Fetch
 const fetchDashboardData = async () => {
   if (!userStore.currentUser) return router.push('/')
@@ -487,8 +501,6 @@ const fetchDashboardData = async () => {
         // Get Devices (API returns all devices for a house)
         const dRes = await api.get(`/geraet/${houseId}`)
         const allDevices = dRes.data
-
-        console.log(allDevices)
 
         // Map devices into rooms locally
         const roomsWithDevices = rooms.map((room) => {
@@ -730,22 +742,42 @@ const sendInvite = async () => {
 const showMemberList = ref(false)
 const householdMembers = ref([])
 const currentViewingHouseName = ref('')
+const currentViewingHouseId = ref(null)
 
 // --- Action: Fetch and Show Members ---
 const openMemberList = async (house) => {
   currentViewingHouseName.value = house.name
+  currentViewingHouseId.value = house.id
   showMemberList.value = true
 
   try {
-    // Note: This calls your route.
-    // If the backend is fixed to filter by haushalt_id, it returns all members.
     const res = await api.get(`/haushaltzuordnung/${house.id}`)
 
-    // To show names, we cross-reference with allUsers (fetched previously)
-    // or you could update your backend SQL to JOIN with the Nutzer table.
     householdMembers.value = res.data
   } catch (err) {
     console.error('Error fetching members', err)
+  }
+}
+
+const removeFromHousehold = async (userId, houseId) => {
+  try {
+    const res = await api.delete(`/haushaltzuordnung/${houseId}?nutzer_id=${userId}`)
+
+    if (res.status === 200) {
+      showMemberList.value = false
+      fetchDashboardData()
+      $q.notify({
+        type: 'positive',
+        message: 'User removed from household successfully',
+      })
+      openMemberList({ id: houseId, name: currentViewingHouseName.value })
+    }
+  } catch (error) {
+    console.error('Error removing user from household:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to remove user from household',
+    })
   }
 }
 
