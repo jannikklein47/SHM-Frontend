@@ -58,8 +58,19 @@
             </div>
           </q-card>
         </div>
+
         <div class="q-mt-xl">
-          <div class="text-h5 q-mb-md">Installed Sensors</div>
+          <div class="row items-center justify-between q-mb-md">
+            <div class="text-h5">Installed Sensors</div>
+            <q-btn
+              color="secondary"
+              icon="add"
+              label="Add Sensor"
+              size="sm"
+              @click="showAddSensorDialog = true"
+            />
+          </div>
+
           <q-card v-for="sensor in sensors" :key="sensor.id" class="q-my-lg" flat bordered>
             <q-card-section class="bg-secondary text-white">
               <div class="row items-center justify-between">
@@ -118,13 +129,45 @@
               </q-table>
             </q-card-section>
           </q-card>
+
+          <div v-if="sensors.length === 0" class="col-12 text-grey">
+            No sensors found for this device.
+          </div>
         </div>
       </div>
-
-      <div v-if="sensors.length === 0" class="col-12 text-grey">
-        No sensors found for this device.
-      </div>
     </div>
+
+    <q-dialog v-model="showAddSensorDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Add New Sensor</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-select
+            v-model="newSensorData.sensor_typ_id"
+            :options="sensorTypes"
+            option-value="id"
+            option-label="name"
+            label="Sensor Type"
+            outlined
+            dense
+            emit-value
+            map-options
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            color="secondary"
+            label="Create"
+            @click="createSensor"
+            :disable="!newSensorData.sensor_typ_id"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -133,7 +176,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from 'boot/axios'
 
-import { date } from 'quasar'
+// import { date } from 'quasar'
+import { date, useQuasar } from 'quasar'
 import DeviceDetail from 'src/components/DeviceDetail.vue'
 
 const formatDate = (val) => {
@@ -195,6 +239,46 @@ const getSwitchingTypeName = (id) => {
   const type = switchingTypes.value.find((t) => t.id === id)
   return type ? type.name : `Process ${id}`
 }
+// Start
+const $q = useQuasar()
+
+// State für den Dialog
+const showAddSensorDialog = ref(false)
+const newSensorData = ref({
+  sensor_typ_id: null,
+})
+
+// Funktion zum Senden an das Backend
+const createSensor = async () => {
+  try {
+    await api.post('/sensor', {
+      sensor_typ_id: newSensorData.value.sensor_typ_id,
+      geraet_id: route.params.id, // Nimmt die ID aus der URL (/device/:id)
+    })
+
+    // Dialog schließen und Reset
+    showAddSensorDialog.value = false
+    newSensorData.value.sensor_typ_id = null
+
+    // Erfolgsmeldung
+    $q.notify({
+      color: 'positive',
+      message: 'Sensor added successfully',
+      icon: 'check',
+    })
+
+    // Seite neu laden, damit der neue Sensor angezeigt wird
+    loadDeviceData()
+  } catch (err) {
+    console.error('Error creating sensor:', err)
+    $q.notify({
+      color: 'negative',
+      message: 'Failed to add sensor',
+      icon: 'error',
+    })
+  }
+}
+// Ende
 
 onMounted(loadDeviceData)
 </script>
