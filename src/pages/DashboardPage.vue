@@ -31,6 +31,15 @@
 
           <q-item-section side>
             <div class="row q-gutter-xs">
+              <q-btn
+                flat
+                round
+                color="negative"
+                icon="exit_to_app"
+                @click.stop="openLeaveHouse(house)"
+              >
+                <q-tooltip>Leave Household</q-tooltip>
+              </q-btn>
               <q-btn flat round color="negative" icon="delete" @click.stop="openDeleteHouse(house)">
                 <q-tooltip>Delete Household</q-tooltip>
               </q-btn>
@@ -265,6 +274,21 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="showLeaveHouseDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section><div class="text-h6">Leave Household</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          Do you really want to leave this household? If you have not assigned another admin, no one
+          will be able to access the critical settings of this household. You can be re-invited by
+          an admin.
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn color="negative" label="Leave" @click="leaveHouse" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="showEditRoomDialog">
       <q-card style="min-width: 350px">
         <q-card-section><div class="text-h6">Rename Room</div></q-card-section>
@@ -463,6 +487,9 @@ const editHouseData = ref({ id: null, name: '' })
 const showDeleteHouseDialog = ref(false)
 const deleteHouseData = ref({ id: null, name: '' })
 
+const showLeaveHouseDialog = ref(false)
+const leaveHouseData = ref({ id: null, name: '' })
+
 const showEditRoomDialog = ref(false)
 const editRoomData = ref({ id: null, name: '' })
 
@@ -565,6 +592,24 @@ const deleteHouse = async () => {
     await api.delete(`/haushalt/${deleteHouseData.value.id}`)
     showDeleteHouseDialog.value = false
     $q.notify({ color: 'positive', message: 'Household renamed.', icon: 'check' })
+    fetchDashboardData()
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const openLeaveHouse = (house) => {
+  leaveHouseData.value = { id: house.id, name: house.name }
+  showLeaveHouseDialog.value = true
+}
+
+const leaveHouse = async () => {
+  try {
+    await api.delete(
+      `/haushaltzuordnung/${leaveHouseData.value.id}?nutzer_id=${userStore.currentUser.id}`,
+    )
+    showLeaveHouseDialog.value = false
+    $q.notify({ color: 'positive', message: 'Left household.', icon: 'check' })
     fetchDashboardData()
   } catch (err) {
     console.error(err)
