@@ -40,14 +40,35 @@
               >
                 <q-tooltip>Leave Household</q-tooltip>
               </q-btn>
-              <q-btn flat round color="negative" icon="delete" @click.stop="openDeleteHouse(house)">
+              <q-btn
+                flat
+                round
+                color="negative"
+                icon="delete"
+                @click.stop="openDeleteHouse(house)"
+                v-if="house.amIAdmin"
+              >
                 <q-tooltip>Delete Household</q-tooltip>
               </q-btn>
-              <q-btn flat round color="secondary" icon="edit" @click.stop="openEditHouse(house)">
+              <q-btn
+                flat
+                round
+                color="secondary"
+                icon="edit"
+                @click.stop="openEditHouse(house)"
+                v-if="house.amIAdmin"
+              >
                 <q-tooltip>Rename Household</q-tooltip>
               </q-btn>
 
-              <q-btn flat round color="grey-7" icon="group" @click.stop="openMemberList(house)">
+              <q-btn
+                flat
+                round
+                color="grey-7"
+                icon="group"
+                @click.stop="openMemberList(house)"
+                v-if="house.amIAdmin"
+              >
                 <q-tooltip>Manage Members</q-tooltip>
               </q-btn>
             </div>
@@ -95,6 +116,7 @@
                       size="sm"
                       style="background-color: #ff888820"
                       @click.stop="openDeleteRoom(room)"
+                      v-if="house.amIAdmin"
                     >
                       <q-tooltip>Rename Room</q-tooltip>
                     </q-btn>
@@ -181,7 +203,15 @@
                       :label="member.verwaltet ? 'Admin' : 'Member'"
                     />
                   </q-item-section>
-                  <q-item-section side v-if="!member.verwaltet && member.id !== currentUser?.id">
+                  <q-item-section
+                    side
+                    v-if="
+                      !member.verwaltet &&
+                      member.id !== currentUser?.id &&
+                      householdMembers.find((member) => member.id === currentUser?.id).verwaltet ===
+                        true
+                    "
+                  >
                     <q-btn
                       icon="close"
                       flat
@@ -189,6 +219,25 @@
                       @click="removeFromHousehold(member.id, currentViewingHouseId)"
                     >
                       <q-tooltip class="text-body2">Remove from Household</q-tooltip>
+                    </q-btn>
+                  </q-item-section>
+                  <q-item-section
+                    side
+                    v-if="
+                      member.id !== currentUser.id &&
+                      !member.verwaltet &&
+                      householdMembers.find((member) => member.id === currentUser?.id).verwaltet ===
+                        true
+                    "
+                  >
+                    <q-btn
+                      flat
+                      dense
+                      color="secondary"
+                      icon="key"
+                      @click="assignAdmin(member.id, currentViewingHouseId)"
+                    >
+                      <q-tooltip class="text-body2">Assign Admin</q-tooltip>
                     </q-btn>
                   </q-item-section>
                 </q-item>
@@ -583,6 +632,11 @@ const fetchDashboardData = async () => {
         const dRes = await api.get(`/geraet/${houseId}`)
         const allDevices = dRes.data
 
+        const mRes = await api.get('/haushaltzuordnung/' + houseId)
+        const members = mRes.data
+
+        const amIAdmin = members.find((m) => m.id === currentUser.value.id).verwaltet === true
+
         // Map devices into rooms locally
         const roomsWithDevices = rooms.map((room) => {
           return {
@@ -591,7 +645,13 @@ const fetchDashboardData = async () => {
           }
         })
 
-        return { ...house, id: houseId, rooms: roomsWithDevices }
+        return {
+          ...house,
+          id: houseId,
+          rooms: roomsWithDevices,
+          members,
+          amIAdmin,
+        }
       }),
     )
 
@@ -905,6 +965,31 @@ const removeFromHousehold = async (userId, houseId) => {
     $q.notify({
       type: 'negative',
       message: 'Failed to remove user from household',
+    })
+  }
+}
+
+const assignAdmin = async (userId, houseId) => {
+  try {
+    const res = await api.patch('/haushaltzuordnung/' + houseId, {
+      nutzer_id: userId,
+      verwaltet: true,
+    })
+
+    if (res.status === 200) {
+      showMemberList.value = false
+      fetchDashboardData()
+      $q.notify({
+        type: 'positive',
+        message: 'User assigned as admin successfully',
+      })
+      openMemberList({ id: houseId, name: currentViewingHouseName.value })
+    }
+  } catch (error) {
+    console.error('Error assigning user as admin:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to assign user as admin',
     })
   }
 }
