@@ -175,6 +175,51 @@
               </div>
             </div>
           </q-card-section>
+          <q-separator inset />
+          <q-card-section>
+            <div class="row items-center justify-between q-mb-sm">
+              <div class="text-h6">Last Activity</div>
+              <q-btn
+                flat
+                dense
+                color="secondary"
+                icon="history"
+                no-caps
+                label="View Full History"
+                @click="
+                  () => {
+                    showHistoryDialog = true
+                    showHistoryData = { logs: house.logs, name: house.name }
+                  }
+                "
+              />
+            </div>
+            <q-timeline>
+              <q-timeline-entry
+                v-for="log in house.logs.slice(0, 1)"
+                :key="log.id"
+                :title="log.beschreibung"
+                :subtitle="formatDate(log.zeitpunkt)"
+                :icon="getLogIcon(log)"
+                :color="getLogColor(log)"
+              >
+                <div class="text-caption text-grey-7">
+                  <span v-if="log.nutzer_vorname">
+                    <strong>{{ log.nutzer_vorname }} {{ log.nutzer_nachname }}</strong>
+                  </span>
+                  <span v-if="log.geraet_name">
+                    Device: <strong>{{ log.geraet_name }}</strong>
+                  </span>
+                  <span v-if="log.raum_name">
+                    Room: <strong>{{ log.raum_name }}</strong>
+                  </span>
+                  <span v-if="log.sensor_id">
+                    Sensor ID: <strong>{{ log.sensor_id }}</strong>
+                  </span>
+                </div>
+              </q-timeline-entry>
+            </q-timeline>
+          </q-card-section>
         </q-card>
 
         <q-dialog v-model="showMemberList">
@@ -559,6 +604,14 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <q-dialog v-model="showHistoryDialog">
+      <q-card>
+        <q-card-section>
+          <log-timeline :logs="showHistoryData.logs" :household-name="showHistoryData.name" />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -567,7 +620,8 @@ import { ref, onMounted, computed } from 'vue'
 import { api } from 'boot/axios'
 import { useRouter } from 'vue-router'
 import { useUserStore } from 'stores/user-store'
-import { useQuasar } from 'quasar'
+import { useQuasar, date } from 'quasar'
+import LogTimeline from 'src/components/LogTimeline.vue'
 
 const $q = useQuasar()
 
@@ -608,6 +662,9 @@ const newRoomData = ref({ name: '', raum_typ_id: null })
 
 const currentUser = computed(() => userStore.currentUser)
 
+const showHistoryDialog = ref(false)
+const showHistoryData = ref({ logs: [], name: '' })
+
 // Main Data Fetch
 const fetchDashboardData = async () => {
   if (!userStore.currentUser) return router.push('/')
@@ -637,6 +694,8 @@ const fetchDashboardData = async () => {
 
         const amIAdmin = members.find((m) => m.id === currentUser.value.id).verwaltet === true
 
+        const logs = (await api.get('/verlauf/' + houseId)).data
+
         // Map devices into rooms locally
         const roomsWithDevices = rooms.map((room) => {
           return {
@@ -651,6 +710,7 @@ const fetchDashboardData = async () => {
           rooms: roomsWithDevices,
           members,
           amIAdmin,
+          logs,
         }
       }),
     )
@@ -998,4 +1058,20 @@ onMounted(() => {
   fetchTypes()
   fetchDashboardData()
 })
+
+const formatDate = (ts) => date.formatDate(ts, 'MM.DD.YYYY, HH:mm:ss')
+
+// Dynamic styling based on log content
+const getLogIcon = (log) => {
+  if (log.nutzer_id) return 'person'
+  if (log.geraet_id) return 'smart_button'
+  if (log.sensor_id) return 'sensors'
+  return 'history'
+}
+
+const getLogColor = (log) => {
+  if (log.beschreibung?.toLowerCase().includes('alarm')) return 'negative'
+  if (log.nutzer_id) return 'primary'
+  return 'secondary'
+}
 </script>
