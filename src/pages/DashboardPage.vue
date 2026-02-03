@@ -118,7 +118,7 @@
                       @click.stop="openDeleteRoom(room)"
                       v-if="house.amIAdmin"
                     >
-                      <q-tooltip>Rename Room</q-tooltip>
+                      <q-tooltip>Delete Room</q-tooltip>
                     </q-btn>
                   </q-card-section>
 

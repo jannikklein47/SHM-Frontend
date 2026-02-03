@@ -74,6 +74,27 @@
           <q-card v-for="sensor in sensors" :key="sensor.id" class="q-my-lg" flat bordered>
             <q-card-section class="bg-secondary text-white">
               <div class="row items-center justify-between">
+                <div class="row items-center q-gutter-x-sm">
+                  <span class="text-h6"> {{ getSensorTypeName(sensor.sensor_typ_id) }}</span>
+                  <span class="text-caption">ID: {{ sensor.id }}</span>
+                </div>
+
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="delete"
+                  color="negative"
+                  style="background-color: rgba(255, 255, 255, 0.2)"
+                  @click="openDeleteSensorDialog(sensor)"
+                >
+                  <q-tooltip>Delete Sensor</q-tooltip>
+                </q-btn>
+              </div>
+            </q-card-section>
+
+            <q-card-section class="bg-secondary text-white">
+              <div class="row items-center justify-between">
                 <span class="text-h6"> {{ getSensorTypeName(sensor.sensor_typ_id) }}</span>
                 <span class="text-caption">Sensor ID: {{ sensor.id }}</span>
               </div>
@@ -169,6 +190,24 @@
       </q-card>
     </q-dialog>
   </q-page>
+
+  <q-dialog v-model="showDeleteSensorDialog">
+    <q-card style="min-width: 350px">
+      <q-card-section>
+        <div class="text-h6">Delete Sensor</div>
+      </q-card-section>
+
+      <q-card-section class="q-pt-none">
+        Are you sure you want to delete sensor <b>{{ sensorToDelete?.id }}</b
+        >? All associated measurements will be permanently removed.
+      </q-card-section>
+
+      <q-card-actions align="right">
+        <q-btn flat label="CANCEL" v-close-popup />
+        <q-btn color="negative" label="DELETE PERMANENTLY" @click="deleteSensor" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 </template>
 
 <script setup>
@@ -239,35 +278,34 @@ const getSwitchingTypeName = (id) => {
   const type = switchingTypes.value.find((t) => t.id === id)
   return type ? type.name : `Process ${id}`
 }
-// Start
+
 const $q = useQuasar()
 
-// State für den Dialog
+// State for Add Sensor Dialog
 const showAddSensorDialog = ref(false)
 const newSensorData = ref({
   sensor_typ_id: null,
 })
 
-// Funktion zum Senden an das Backend
+// Function to create a new sensor
 const createSensor = async () => {
   try {
     await api.post('/sensor', {
       sensor_typ_id: newSensorData.value.sensor_typ_id,
-      geraet_id: route.params.id, // Nimmt die ID aus der URL (/device/:id)
+      geraet_id: route.params.id, // ID from url (/device/:id)
     })
 
-    // Dialog schließen und Reset
     showAddSensorDialog.value = false
     newSensorData.value.sensor_typ_id = null
 
-    // Erfolgsmeldung
+    // Success notification
     $q.notify({
       color: 'positive',
       message: 'Sensor added successfully',
       icon: 'check',
     })
 
-    // Seite neu laden, damit der neue Sensor angezeigt wird
+    // Reload device data to show the new sensor
     loadDeviceData()
   } catch (err) {
     console.error('Error creating sensor:', err)
@@ -278,7 +316,46 @@ const createSensor = async () => {
     })
   }
 }
-// Ende
+
+// Neue State-Variablen
+const showDeleteSensorDialog = ref(false)
+const sensorToDelete = ref(null)
+
+// Öffnet den Dialog und merkt sich, welcher Sensor gelöscht werden soll
+const openDeleteSensorDialog = (sensor) => {
+  sensorToDelete.value = sensor
+  showDeleteSensorDialog.value = true
+}
+
+// Delete Sensor Function
+const deleteSensor = async () => {
+  if (!sensorToDelete.value) return
+
+  try {
+    await api.delete(`/sensor/${sensorToDelete.value.id}`)
+
+    // UI Feedback
+    $q.notify({
+      color: 'positive',
+      message: 'Sensor deleted successfully.',
+      icon: 'delete',
+    })
+
+    // close Dialog
+    showDeleteSensorDialog.value = false
+    sensorToDelete.value = null
+
+    // Refresh device data
+    loadDeviceData()
+  } catch (err) {
+    console.error('Fehler beim Löschen des Sensors:', err)
+    $q.notify({
+      color: 'negative',
+      message: 'Fehler beim Löschen des Sensors.',
+      icon: 'error',
+    })
+  }
+}
 
 onMounted(loadDeviceData)
 </script>
