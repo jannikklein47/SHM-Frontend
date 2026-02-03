@@ -73,6 +73,18 @@
 
           <q-card v-for="sensor in sensors" :key="sensor.id" class="q-my-lg" flat bordered>
             <q-card-section class="bg-secondary text-white">
+              <q-btn
+                flat
+                dense
+                round
+                icon="add_chart"
+                color="white"
+                style="background-color: rgba(255, 255, 255, 0.2)"
+                class="q-mr-sm"
+                @click="openAddMeasurementDialog(sensor)"
+              >
+                <q-tooltip>Add Measurement</q-tooltip>
+              </q-btn>
               <div class="row items-center justify-between">
                 <div class="row items-center q-gutter-x-sm">
                   <span class="text-h6"> {{ getSensorTypeName(sensor.sensor_typ_id) }}</span>
@@ -189,25 +201,63 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="showAddMeasurementDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Record New Measurement</div>
+          <div class="text-caption text-grey">Sensor ID: {{ targetSensorId }}</div>
+        </q-card-section>
+
+        <q-card-section class="q-gutter-md">
+          <q-input
+            v-model.number="newMeasurementData.value"
+            label="Value (e.g., Temperature in °C)"
+            type="number"
+            outlined
+            dense
+            autofocus
+          />
+
+          <q-input
+            v-model.number="newMeasurementData.threshold"
+            label="Threshold (Limit)"
+            type="number"
+            outlined
+            dense
+            hint="At what value is this critical?"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            color="secondary"
+            label="Save"
+            @click="createMeasurement"
+            :disable="!newMeasurementData.value || !newMeasurementData.threshold"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="showDeleteSensorDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Delete Sensor</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          Are you sure you want to delete sensor <b>{{ sensorToDelete?.id }}</b
+          >? All associated measurements will be permanently removed.
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="CANCEL" v-close-popup />
+          <q-btn color="negative" label="DELETE PERMANENTLY" @click="deleteSensor" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
-
-  <q-dialog v-model="showDeleteSensorDialog">
-    <q-card style="min-width: 350px">
-      <q-card-section>
-        <div class="text-h6">Delete Sensor</div>
-      </q-card-section>
-
-      <q-card-section class="q-pt-none">
-        Are you sure you want to delete sensor <b>{{ sensorToDelete?.id }}</b
-        >? All associated measurements will be permanently removed.
-      </q-card-section>
-
-      <q-card-actions align="right">
-        <q-btn flat label="CANCEL" v-close-popup />
-        <q-btn color="negative" label="DELETE PERMANENTLY" @click="deleteSensor" />
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
 </template>
 
 <script setup>
@@ -352,6 +402,56 @@ const deleteSensor = async () => {
     $q.notify({
       color: 'negative',
       message: 'Fehler beim Löschen des Sensors.',
+      icon: 'error',
+    })
+  }
+}
+
+// --- STATE for Measurements ---
+const showAddMeasurementDialog = ref(false)
+const targetSensorId = ref(null)
+const newMeasurementData = ref({
+  value: '',
+  threshold: 20, // Default value for convenience
+})
+
+// --- ACTIONS ---
+
+// 1. Open Dialog and store which sensor we are adding data to
+const openAddMeasurementDialog = (sensor) => {
+  targetSensorId.value = sensor.id
+  // Reset value input, keep threshold default or reset it too
+  newMeasurementData.value.value = ''
+  showAddMeasurementDialog.value = true
+}
+
+// 2. Send data to Backend
+const createMeasurement = async () => {
+  try {
+    // Matches our new English backend route /measurement
+    await api.post('/messungen', {
+      sensor_id: targetSensorId.value,
+      wert: newMeasurementData.value.value,
+      schwellenwert: newMeasurementData.value.threshold,
+    })
+
+    // UI Feedback
+    $q.notify({
+      color: 'positive',
+      message: 'Measurement saved successfully!',
+      icon: 'cloud_upload',
+    })
+
+    // Close Dialog
+    showAddMeasurementDialog.value = false
+
+    // IMPORTANT: Refresh data so the new value appears in the table immediately
+    await loadDeviceData()
+  } catch (err) {
+    console.error('Error saving measurement:', err)
+    $q.notify({
+      color: 'negative',
+      message: 'Failed to save measurement.',
       icon: 'error',
     })
   }
