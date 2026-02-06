@@ -53,6 +53,65 @@
               </template>
             </q-table>
 
+            <div class="q-mt-xl">
+              <div class="row items-center justify-between q-mb-md">
+                <div class="text-h5">Operation History</div>
+                <q-btn
+                  color="secondary"
+                  icon="add"
+                  label="Add Operation"
+                  size="sm"
+                  @click="showAddOperationDialog = true"
+                />
+              </div>
+
+              <q-card bordered flat> </q-card>
+            </div>
+
+            <q-dialog v-model="showAddOperationDialog">
+              <q-card style="min-width: 350px">
+                <q-card-section>
+                  <div class="text-h6">Record Operation</div>
+                </q-card-section>
+
+                <q-card-section class="q-gutter-md">
+                  <q-select
+                    v-model="newOperationData.type_id"
+                    :options="switchingTypes"
+                    option-value="id"
+                    option-label="name"
+                    label="Operation Type (e.g. Manual)"
+                    outlined
+                    dense
+                    emit-value
+                    map-options
+                  />
+
+                  <q-select
+                    v-model="newOperationData.state_id"
+                    :options="stateTypes"
+                    option-value="id"
+                    option-label="name"
+                    label="Resulting State (e.g. ON)"
+                    outlined
+                    dense
+                    emit-value
+                    map-options
+                  />
+                </q-card-section>
+
+                <q-card-actions align="right">
+                  <q-btn flat label="Cancel" v-close-popup />
+                  <q-btn
+                    color="secondary"
+                    label="Save"
+                    @click="createOperation"
+                    :disable="!newOperationData.type_id || !newOperationData.state_id"
+                  />
+                </q-card-actions>
+              </q-card>
+            </q-dialog>
+
             <div v-if="switchingLogs.length === 0" class="q-pa-md text-center text-grey">
               No operation logs found for this device.
             </div>
@@ -292,15 +351,48 @@ const getSensorTypeName = (id) => {
 const switchingLogs = ref([])
 const switchingTypes = ref([]) // From /typen (schaltvorgang_typ)
 
+// const loadDeviceData = async () => {
+//   loading.value = true
+//   try {
+//     // 1. Get Types (Labels for states and process types)
+//     const typesRes = await api.get('/typen')
+//     sensorTypes.value = typesRes.data.sensor_typ
+//     switchingTypes.value = typesRes.data.schaltvorgang_typ
+
+//     // 2. Load Sensors and Measurements (as done before)
+//     const sensorRes = await api.get(`/sensor/${route.params.id}`)
+//     const sensorList = sensorRes.data
+//     sensors.value = await Promise.all(
+//       sensorList.map(async (s) => {
+//         const mRes = await api.get(`/messungen/${s.id}`)
+//         return { ...s, measurements: mRes.data }
+//       }),
+//     )
+
+//     // 3. Load Switching Processes for the Device
+//     const schaltRes = await api.get(`/schaltvorgaenge/${route.params.id}`)
+//     switchingLogs.value = schaltRes.data
+
+//     // 4. Load the Device
+//     const deviceRes = await api.get(`/geraetId/${route.params.id}`)
+//     device.value = deviceRes.data
+//   } catch (err) {
+//     console.error('Error loading device full data', err)
+//   } finally {
+//     loading.value = false
+//   }
+// }
+
 const loadDeviceData = async () => {
   loading.value = true
   try {
-    // 1. Get Types (Labels for states and process types)
+    // 1. Get Types
     const typesRes = await api.get('/typen')
     sensorTypes.value = typesRes.data.sensor_typ
     switchingTypes.value = typesRes.data.schaltvorgang_typ
+    stateTypes.value = typesRes.data.zustand // <--- NEW: Store states
 
-    // 2. Load Sensors and Measurements (as done before)
+    // ... existing sensor loading logic ...
     const sensorRes = await api.get(`/sensor/${route.params.id}`)
     const sensorList = sensorRes.data
     sensors.value = await Promise.all(
@@ -310,11 +402,11 @@ const loadDeviceData = async () => {
       }),
     )
 
-    // 3. Load Switching Processes for the Device
+    // ... existing switching logs logic ...
     const schaltRes = await api.get(`/schaltvorgaenge/${route.params.id}`)
     switchingLogs.value = schaltRes.data
 
-    // 4. Load the Device
+    // ... existing device loading logic ...
     const deviceRes = await api.get(`/geraetId/${route.params.id}`)
     device.value = deviceRes.data
   } catch (err) {
@@ -398,16 +490,15 @@ const deleteSensor = async () => {
     // Refresh device data
     loadDeviceData()
   } catch (err) {
-    console.error('Fehler beim Löschen des Sensors:', err)
+    console.error('Error deleting sensor:', err)
     $q.notify({
       color: 'negative',
-      message: 'Fehler beim Löschen des Sensors.',
+      message: 'Error deleting sensor.',
       icon: 'error',
     })
   }
 }
 
-// --- STATE for Measurements ---
 const showAddMeasurementDialog = ref(false)
 const targetSensorId = ref(null)
 const newMeasurementData = ref({
@@ -456,6 +547,50 @@ const createMeasurement = async () => {
     })
   }
 }
+
+// ... existing imports ...
+
+// --- NEW REFS ---
+const stateTypes = ref([]) // To store options for ON, OFF, etc.
+const showAddOperationDialog = ref(false)
+const newOperationData = ref({
+  type_id: null,
+  state_id: null,
+})
+
+// Update the loadDeviceData function to also fetch 'zustand'
+
+// --- NEW ACTION: Create Operation ---
+const createOperation = async () => {
+  try {
+    await api.post('/operations', {
+      device_id: route.params.id,
+      type_id: newOperationData.value.type_id,
+      state_id: newOperationData.value.state_id,
+    })
+
+    $q.notify({
+      color: 'positive',
+      message: 'Operation recorded successfully',
+      icon: 'check',
+    })
+
+    showAddOperationDialog.value = false
+    newOperationData.value = { type_id: null, state_id: null }
+
+    // Refresh data to show new entry in table
+    loadDeviceData()
+  } catch (err) {
+    console.error('Error creating operation:', err)
+    $q.notify({
+      color: 'negative',
+      message: 'Failed to record operation',
+      icon: 'error',
+    })
+  }
+}
+
+// ... rest of existing code ...
 
 onMounted(loadDeviceData)
 </script>
