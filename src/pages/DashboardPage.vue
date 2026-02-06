@@ -92,8 +92,12 @@
             <div class="row q-col-gutter-md">
               <div v-for="room in house.rooms" :key="room.id" class="col-12 col-md-6 col-lg-4">
                 <q-card bordered class="my-card" flat>
-                  <q-card-section class="bg-primary text-white q-py-sm flex">
+                  <q-card-section class="bg-primary text-white q-py-sm flex items-center">
                     <div class="text-subtitle1">{{ room.name }}</div>
+
+                    <q-badge color="white" text-color="primary" class="q-ml-sm">
+                      {{ room.totalDeviceCount }} Devices
+                    </q-badge>
                     <q-space />
                     <q-btn
                       flat
@@ -685,6 +689,15 @@ const fetchDashboardData = async () => {
         const rRes = await api.get(`/raum/${houseId}`)
         const rooms = rRes.data
 
+        // NEU HINZUFÜGEN: Zähler vom Server holen
+        let roomCounts = []
+        try {
+          const countRes = await api.get(`/roomDeviceCount/${houseId}`)
+          roomCounts = countRes.data
+        } catch (e) {
+          console.warn('Konnte Raum-Statistik nicht laden', e)
+        }
+
         // Get Devices (API returns all devices for a house)
         const dRes = await api.get(`/geraet/${houseId}`)
         const allDevices = dRes.data
@@ -698,8 +711,11 @@ const fetchDashboardData = async () => {
 
         // Map devices into rooms locally
         const roomsWithDevices = rooms.map((room) => {
+          const countEntry = roomCounts.find((c) => c.id === room.id)
+          const totalCount = countEntry ? countEntry.anzahl_geraete : 0
           return {
             ...room,
+            totalDeviceCount: totalCount,
             devices: allDevices.filter((d) => d.raum_id === room.id),
           }
         })

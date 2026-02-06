@@ -131,6 +131,20 @@
           </div>
 
           <q-card v-for="sensor in sensors" :key="sensor.id" class="q-my-lg" flat bordered>
+            <q-card-section
+              v-if="getAverageValue(sensor.id)"
+              class="bg-blue-1 text-blue-9"
+              style="border-bottom: 1px solid #bbdefb"
+            >
+              <div class="row items-center">
+                <q-icon name="functions" class="q-mr-sm" size="sm" />
+                <div class="text-body2">
+                  <strong>Historical average:</strong> All measurements from this sensor yield an
+                  average value of <strong>{{ getAverageValue(sensor.id) }}</strong
+                  >.
+                </div>
+              </div>
+            </q-card-section>
             <q-card-section class="bg-secondary text-white">
               <q-btn
                 flat
@@ -341,6 +355,8 @@ const sensorTypes = ref([])
 
 const device = ref({})
 
+const averageReadings = ref([])
+
 // Helper to resolve Type Name
 const getSensorTypeName = (id) => {
   const type = sensorTypes.value.find((t) => t.id === id)
@@ -409,6 +425,9 @@ const loadDeviceData = async () => {
     // ... existing device loading logic ...
     const deviceRes = await api.get(`/geraetId/${route.params.id}`)
     device.value = deviceRes.data
+
+    const avgRes = await api.get(`/averageReading/${route.params.id}`)
+    averageReadings.value = avgRes.data
   } catch (err) {
     console.error('Error loading device full data', err)
   } finally {
@@ -590,7 +609,11 @@ const createOperation = async () => {
   }
 }
 
-// ... rest of existing code ...
+const getAverageValue = (sensorId) => {
+  const item = averageReadings.value.find((x) => x.id === sensorId)
+  if (!item || !item.durchschnittswert) return null
+  return parseFloat(item.durchschnittswert).toFixed(2)
+}
 
 onMounted(loadDeviceData)
 </script>
