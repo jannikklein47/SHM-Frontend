@@ -53,14 +53,117 @@
               </template>
             </q-table>
 
+            <div class="q-mt-xl">
+              <div class="row items-center justify-between q-mb-md">
+                <div class="text-h5">Operation History</div>
+                <q-btn
+                  color="secondary"
+                  icon="add"
+                  label="Add Operation"
+                  size="sm"
+                  @click="showAddOperationDialog = true"
+                />
+              </div>
+
+              <q-card bordered flat> </q-card>
+            </div>
+
+            <q-dialog v-model="showAddOperationDialog">
+              <q-card style="min-width: 350px">
+                <q-card-section>
+                  <div class="text-h6">Record Operation</div>
+                </q-card-section>
+
+                <q-card-section class="q-gutter-md">
+                  <q-select
+                    v-model="newOperationData.type_id"
+                    :options="switchingTypes"
+                    option-value="id"
+                    option-label="name"
+                    label="Operation Type (e.g. Manual)"
+                    outlined
+                    dense
+                    emit-value
+                    map-options
+                  />
+
+                  <q-select
+                    v-model="newOperationData.state_id"
+                    :options="stateTypes"
+                    option-value="id"
+                    option-label="name"
+                    label="Resulting State (e.g. ON)"
+                    outlined
+                    dense
+                    emit-value
+                    map-options
+                  />
+                </q-card-section>
+
+                <q-card-actions align="right">
+                  <q-btn flat label="Cancel" v-close-popup />
+                  <q-btn
+                    color="secondary"
+                    label="Save"
+                    @click="createOperation"
+                    :disable="!newOperationData.type_id || !newOperationData.state_id"
+                  />
+                </q-card-actions>
+              </q-card>
+            </q-dialog>
+
             <div v-if="switchingLogs.length === 0" class="q-pa-md text-center text-grey">
               No operation logs found for this device.
             </div>
           </q-card>
         </div>
+
         <div class="q-mt-xl">
-          <div class="text-h5 q-mb-md">Installed Sensors</div>
+          <div class="row items-center justify-between q-mb-md">
+            <div class="text-h5">Installed Sensors</div>
+            <q-btn
+              color="secondary"
+              icon="add"
+              label="Add Sensor"
+              size="sm"
+              @click="showAddSensorDialog = true"
+            />
+          </div>
+
           <q-card v-for="sensor in sensors" :key="sensor.id" class="q-my-lg" flat bordered>
+            <q-card-section class="bg-secondary text-white">
+              <q-btn
+                flat
+                dense
+                round
+                icon="add_chart"
+                color="white"
+                style="background-color: rgba(255, 255, 255, 0.2)"
+                class="q-mr-sm"
+                @click="openAddMeasurementDialog(sensor)"
+              >
+                <q-tooltip>Add Measurement</q-tooltip>
+              </q-btn>
+              <div class="row items-center justify-between">
+                <div class="row items-center q-gutter-x-sm">
+                  <span class="text-h6"> {{ getSensorTypeName(sensor.sensor_typ_id) }}</span>
+                  <span class="text-caption">ID: {{ sensor.id }}</span>
+                </div>
+
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="delete"
+                  color="negative"
+                  style="background-color: rgba(255, 255, 255, 0.2)"
+                  @click="openDeleteSensorDialog(sensor)"
+                >
+                  <q-tooltip>Delete Sensor</q-tooltip>
+                </q-btn>
+              </div>
+            </q-card-section>
+
             <q-card-section class="bg-secondary text-white">
               <div class="row items-center justify-between">
                 <span class="text-h6"> {{ getSensorTypeName(sensor.sensor_typ_id) }}</span>
@@ -118,13 +221,101 @@
               </q-table>
             </q-card-section>
           </q-card>
+
+          <div v-if="sensors.length === 0" class="col-12 text-grey">
+            No sensors found for this device.
+          </div>
         </div>
       </div>
-
-      <div v-if="sensors.length === 0" class="col-12 text-grey">
-        No sensors found for this device.
-      </div>
     </div>
+
+    <q-dialog v-model="showAddSensorDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Add New Sensor</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-select
+            v-model="newSensorData.sensor_typ_id"
+            :options="sensorTypes"
+            option-value="id"
+            option-label="name"
+            label="Sensor Type"
+            outlined
+            dense
+            emit-value
+            map-options
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            color="secondary"
+            label="Create"
+            @click="createSensor"
+            :disable="!newSensorData.sensor_typ_id"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+    <q-dialog v-model="showAddMeasurementDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Record New Measurement</div>
+          <div class="text-caption text-grey">Sensor ID: {{ targetSensorId }}</div>
+        </q-card-section>
+
+        <q-card-section class="q-gutter-md">
+          <q-input
+            v-model.number="newMeasurementData.value"
+            label="Value (e.g., Temperature in °C)"
+            type="number"
+            outlined
+            dense
+            autofocus
+          />
+
+          <q-input
+            v-model.number="newMeasurementData.threshold"
+            label="Threshold (Limit)"
+            type="number"
+            outlined
+            dense
+            hint="At what value is this critical?"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            color="secondary"
+            label="Save"
+            @click="createMeasurement"
+            :disable="!newMeasurementData.value || !newMeasurementData.threshold"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="showDeleteSensorDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Delete Sensor</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          Are you sure you want to delete sensor <b>{{ sensorToDelete?.id }}</b
+          >? All associated measurements will be permanently removed.
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="CANCEL" v-close-popup />
+          <q-btn color="negative" label="DELETE PERMANENTLY" @click="deleteSensor" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -133,7 +324,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from 'boot/axios'
 
-import { date } from 'quasar'
+// import { date } from 'quasar'
+import { date, useQuasar } from 'quasar'
 import DeviceDetail from 'src/components/DeviceDetail.vue'
 
 const formatDate = (val) => {
@@ -159,15 +351,48 @@ const getSensorTypeName = (id) => {
 const switchingLogs = ref([])
 const switchingTypes = ref([]) // From /typen (schaltvorgang_typ)
 
+// const loadDeviceData = async () => {
+//   loading.value = true
+//   try {
+//     // 1. Get Types (Labels for states and process types)
+//     const typesRes = await api.get('/typen')
+//     sensorTypes.value = typesRes.data.sensor_typ
+//     switchingTypes.value = typesRes.data.schaltvorgang_typ
+
+//     // 2. Load Sensors and Measurements (as done before)
+//     const sensorRes = await api.get(`/sensor/${route.params.id}`)
+//     const sensorList = sensorRes.data
+//     sensors.value = await Promise.all(
+//       sensorList.map(async (s) => {
+//         const mRes = await api.get(`/messungen/${s.id}`)
+//         return { ...s, measurements: mRes.data }
+//       }),
+//     )
+
+//     // 3. Load Switching Processes for the Device
+//     const schaltRes = await api.get(`/schaltvorgaenge/${route.params.id}`)
+//     switchingLogs.value = schaltRes.data
+
+//     // 4. Load the Device
+//     const deviceRes = await api.get(`/geraetId/${route.params.id}`)
+//     device.value = deviceRes.data
+//   } catch (err) {
+//     console.error('Error loading device full data', err)
+//   } finally {
+//     loading.value = false
+//   }
+// }
+
 const loadDeviceData = async () => {
   loading.value = true
   try {
-    // 1. Get Types (Labels for states and process types)
+    // 1. Get Types
     const typesRes = await api.get('/typen')
     sensorTypes.value = typesRes.data.sensor_typ
     switchingTypes.value = typesRes.data.schaltvorgang_typ
+    stateTypes.value = typesRes.data.zustand // <--- NEW: Store states
 
-    // 2. Load Sensors and Measurements (as done before)
+    // ... existing sensor loading logic ...
     const sensorRes = await api.get(`/sensor/${route.params.id}`)
     const sensorList = sensorRes.data
     sensors.value = await Promise.all(
@@ -177,11 +402,11 @@ const loadDeviceData = async () => {
       }),
     )
 
-    // 3. Load Switching Processes for the Device
+    // ... existing switching logs logic ...
     const schaltRes = await api.get(`/schaltvorgaenge/${route.params.id}`)
     switchingLogs.value = schaltRes.data
 
-    // 4. Load the Device
+    // ... existing device loading logic ...
     const deviceRes = await api.get(`/geraetId/${route.params.id}`)
     device.value = deviceRes.data
   } catch (err) {
@@ -195,6 +420,177 @@ const getSwitchingTypeName = (id) => {
   const type = switchingTypes.value.find((t) => t.id === id)
   return type ? type.name : `Process ${id}`
 }
+
+const $q = useQuasar()
+
+// State for Add Sensor Dialog
+const showAddSensorDialog = ref(false)
+const newSensorData = ref({
+  sensor_typ_id: null,
+})
+
+// Function to create a new sensor
+const createSensor = async () => {
+  try {
+    await api.post('/sensor', {
+      sensor_typ_id: newSensorData.value.sensor_typ_id,
+      geraet_id: route.params.id, // ID from url (/device/:id)
+    })
+
+    showAddSensorDialog.value = false
+    newSensorData.value.sensor_typ_id = null
+
+    // Success notification
+    $q.notify({
+      color: 'positive',
+      message: 'Sensor added successfully',
+      icon: 'check',
+    })
+
+    // Reload device data to show the new sensor
+    loadDeviceData()
+  } catch (err) {
+    console.error('Error creating sensor:', err)
+    $q.notify({
+      color: 'negative',
+      message: 'Failed to add sensor',
+      icon: 'error',
+    })
+  }
+}
+
+// Neue State-Variablen
+const showDeleteSensorDialog = ref(false)
+const sensorToDelete = ref(null)
+
+// Öffnet den Dialog und merkt sich, welcher Sensor gelöscht werden soll
+const openDeleteSensorDialog = (sensor) => {
+  sensorToDelete.value = sensor
+  showDeleteSensorDialog.value = true
+}
+
+// Delete Sensor Function
+const deleteSensor = async () => {
+  if (!sensorToDelete.value) return
+
+  try {
+    await api.delete(`/sensor/${sensorToDelete.value.id}`)
+
+    // UI Feedback
+    $q.notify({
+      color: 'positive',
+      message: 'Sensor deleted successfully.',
+      icon: 'delete',
+    })
+
+    // close Dialog
+    showDeleteSensorDialog.value = false
+    sensorToDelete.value = null
+
+    // Refresh device data
+    loadDeviceData()
+  } catch (err) {
+    console.error('Error deleting sensor:', err)
+    $q.notify({
+      color: 'negative',
+      message: 'Error deleting sensor.',
+      icon: 'error',
+    })
+  }
+}
+
+const showAddMeasurementDialog = ref(false)
+const targetSensorId = ref(null)
+const newMeasurementData = ref({
+  value: '',
+  threshold: 20, // Default value for convenience
+})
+
+// --- ACTIONS ---
+
+// 1. Open Dialog and store which sensor we are adding data to
+const openAddMeasurementDialog = (sensor) => {
+  targetSensorId.value = sensor.id
+  // Reset value input, keep threshold default or reset it too
+  newMeasurementData.value.value = ''
+  showAddMeasurementDialog.value = true
+}
+
+// 2. Send data to Backend
+const createMeasurement = async () => {
+  try {
+    // Matches our new English backend route /measurement
+    await api.post('/messungen', {
+      sensor_id: targetSensorId.value,
+      wert: newMeasurementData.value.value,
+      schwellenwert: newMeasurementData.value.threshold,
+    })
+
+    // UI Feedback
+    $q.notify({
+      color: 'positive',
+      message: 'Measurement saved successfully!',
+      icon: 'cloud_upload',
+    })
+
+    // Close Dialog
+    showAddMeasurementDialog.value = false
+
+    // IMPORTANT: Refresh data so the new value appears in the table immediately
+    await loadDeviceData()
+  } catch (err) {
+    console.error('Error saving measurement:', err)
+    $q.notify({
+      color: 'negative',
+      message: 'Failed to save measurement.',
+      icon: 'error',
+    })
+  }
+}
+
+// ... existing imports ...
+
+// --- NEW REFS ---
+const stateTypes = ref([]) // To store options for ON, OFF, etc.
+const showAddOperationDialog = ref(false)
+const newOperationData = ref({
+  type_id: null,
+  state_id: null,
+})
+
+// Update the loadDeviceData function to also fetch 'zustand'
+
+// --- NEW ACTION: Create Operation ---
+const createOperation = async () => {
+  try {
+    await api.post('/operations', {
+      device_id: route.params.id,
+      type_id: newOperationData.value.type_id,
+      state_id: newOperationData.value.state_id,
+    })
+
+    $q.notify({
+      color: 'positive',
+      message: 'Operation recorded successfully',
+      icon: 'check',
+    })
+
+    showAddOperationDialog.value = false
+    newOperationData.value = { type_id: null, state_id: null }
+
+    // Refresh data to show new entry in table
+    loadDeviceData()
+  } catch (err) {
+    console.error('Error creating operation:', err)
+    $q.notify({
+      color: 'negative',
+      message: 'Failed to record operation',
+      icon: 'error',
+    })
+  }
+}
+
+// ... rest of existing code ...
 
 onMounted(loadDeviceData)
 </script>

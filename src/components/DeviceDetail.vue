@@ -31,7 +31,7 @@
           icon="delete"
           @click.stop="openDeleteDevice(device)"
         >
-          <q-tooltip>Rename Device</q-tooltip>
+          <q-tooltip>Delete Device</q-tooltip>
         </q-btn>
       </div>
     </q-card-section>
