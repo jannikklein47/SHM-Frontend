@@ -55,8 +55,9 @@
 
             <div class="q-mt-xl">
               <div class="row items-center justify-between q-mb-md">
-                <div class="text-h5">Operation History</div>
+                <q-space />
                 <q-btn
+                  class="q-mr-md"
                   color="secondary"
                   icon="add"
                   label="Add Operation"
@@ -64,8 +65,6 @@
                   @click="showAddOperationDialog = true"
                 />
               </div>
-
-              <q-card bordered flat> </q-card>
             </div>
 
             <q-dialog v-model="showAddOperationDialog">
@@ -118,6 +117,45 @@
           </q-card>
         </div>
 
+        <div class="q-mt-xl" v-if="alarmStats.length > 0">
+          <div class="text-h5 q-mb-md">Alarm History</div>
+          <q-card bordered flat>
+            <q-table
+              flat
+              :rows="alarmStats"
+              :columns="[
+                {
+                  name: 'time',
+                  label: 'Time',
+                  field: 'zeitpunkt',
+                  align: 'left',
+                  format: (val) => formatDate(val),
+                },
+                { name: 'type', label: 'Sensor Type', field: 'messart', align: 'left' },
+                { name: 'val', label: 'Value', field: 'wert', align: 'right' },
+                { name: 'limit', label: 'Threshold', field: 'schwellenwert', align: 'right' },
+                {
+                  name: 'percent',
+                  label: 'Exceeded by',
+                  field: 'ueberschreitung_prozent',
+                  align: 'right',
+                },
+              ]"
+              row-key="alarm_id"
+              :pagination="{ rowsPerPage: 5 }"
+            >
+              <template v-slot:body-cell-val="props">
+                <q-td :props="props" class="text-weight-bold text-negative">
+                  {{ props.value }}
+                </q-td>
+              </template>
+              <template v-slot:body-cell-percent="props">
+                <q-td :props="props" class="text-negative"> +{{ props.value }}% </q-td>
+              </template>
+            </q-table>
+          </q-card>
+        </div>
+
         <div class="q-mt-xl">
           <div class="row items-center justify-between q-mb-md">
             <div class="text-h5">Installed Sensors</div>
@@ -131,6 +169,36 @@
           </div>
 
           <q-card v-for="sensor in sensors" :key="sensor.id" class="q-my-lg" flat bordered>
+            <q-card-section
+              v-if="getAverageValue(sensor.id)"
+              class="bg-blue-1 text-blue-9"
+              style="border-bottom: 1px solid #bbdefb"
+            >
+              <div class="row items-center">
+                <q-icon name="functions" class="q-mr-sm" size="sm" />
+                <div class="text-body2">
+                  <strong>Historical average:</strong> All measurements from this sensor yield an
+                  average value of <strong>{{ getAverageValue(sensor.id) }}</strong
+                  >.
+                </div>
+              </div>
+            </q-card-section>
+
+            <q-card-section
+              v-if="getAverageDeviation(sensor.id)"
+              class="bg-orange-1 text-orange-9"
+              style="border-bottom: 1px solid #ffe0b2"
+            >
+              <div class="row items-center">
+                <q-icon name="warning" class="q-mr-sm" size="sm" />
+                <div class="text-body2">
+                  <strong>Alarm Severity:</strong> When this sensor triggers an alarm, it exceeds
+                  the threshold by an average of
+                  <strong>{{ getAverageDeviation(sensor.id) }}%</strong>.
+                </div>
+              </div>
+            </q-card-section>
+
             <q-card-section class="bg-secondary text-white">
               <q-btn
                 flat
@@ -341,6 +409,9 @@ const sensorTypes = ref([])
 
 const device = ref({})
 
+const averageReadings = ref([])
+const averageDeviations = ref([])
+const alarmStats = ref([])
 // Helper to resolve Type Name
 const getSensorTypeName = (id) => {
   const type = sensorTypes.value.find((t) => t.id === id)
@@ -350,38 +421,6 @@ const getSensorTypeName = (id) => {
 // --- New State for Switching Processes ---
 const switchingLogs = ref([])
 const switchingTypes = ref([]) // From /typen (schaltvorgang_typ)
-
-// const loadDeviceData = async () => {
-//   loading.value = true
-//   try {
-//     // 1. Get Types (Labels for states and process types)
-//     const typesRes = await api.get('/typen')
-//     sensorTypes.value = typesRes.data.sensor_typ
-//     switchingTypes.value = typesRes.data.schaltvorgang_typ
-
-//     // 2. Load Sensors and Measurements (as done before)
-//     const sensorRes = await api.get(`/sensor/${route.params.id}`)
-//     const sensorList = sensorRes.data
-//     sensors.value = await Promise.all(
-//       sensorList.map(async (s) => {
-//         const mRes = await api.get(`/messungen/${s.id}`)
-//         return { ...s, measurements: mRes.data }
-//       }),
-//     )
-
-//     // 3. Load Switching Processes for the Device
-//     const schaltRes = await api.get(`/schaltvorgaenge/${route.params.id}`)
-//     switchingLogs.value = schaltRes.data
-
-//     // 4. Load the Device
-//     const deviceRes = await api.get(`/geraetId/${route.params.id}`)
-//     device.value = deviceRes.data
-//   } catch (err) {
-//     console.error('Error loading device full data', err)
-//   } finally {
-//     loading.value = false
-//   }
-// }
 
 const loadDeviceData = async () => {
   loading.value = true
@@ -409,6 +448,14 @@ const loadDeviceData = async () => {
     // ... existing device loading logic ...
     const deviceRes = await api.get(`/geraetId/${route.params.id}`)
     device.value = deviceRes.data
+
+    const avgRes = await api.get(`/averageReading/${route.params.id}`)
+    averageReadings.value = avgRes.data
+    const devStatsRes = await api.get(`/deviceSensorAverageDifference/${route.params.id}`)
+    averageDeviations.value = devStatsRes.data
+
+    const alarmRes = await api.get(`/deviceAlarmStats/${route.params.id}`)
+    alarmStats.value = alarmRes.data
   } catch (err) {
     console.error('Error loading device full data', err)
   } finally {
@@ -590,7 +637,17 @@ const createOperation = async () => {
   }
 }
 
-// ... rest of existing code ...
+const getAverageValue = (sensorId) => {
+  const item = averageReadings.value.find((x) => x.id === sensorId)
+  if (!item || !item.durchschnittswert) return null
+  return parseFloat(item.durchschnittswert).toFixed(2)
+}
+
+const getAverageDeviation = (sensorId) => {
+  const item = averageDeviations.value.find((x) => x.id === sensorId)
+  if (!item || item.durchschnitt === null || item.durchschnitt === undefined) return null
+  return parseFloat(item.durchschnitt).toFixed(2)
+}
 
 onMounted(loadDeviceData)
 </script>
