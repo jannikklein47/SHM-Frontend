@@ -55,8 +55,9 @@
 
             <div class="q-mt-xl">
               <div class="row items-center justify-between q-mb-md">
-                <div class="text-h5">Operation History</div>
+                <q-space />
                 <q-btn
+                  class="q-mr-md"
                   color="secondary"
                   icon="add"
                   label="Add Operation"
@@ -64,8 +65,6 @@
                   @click="showAddOperationDialog = true"
                 />
               </div>
-
-              <q-card bordered flat> </q-card>
             </div>
 
             <q-dialog v-model="showAddOperationDialog">
