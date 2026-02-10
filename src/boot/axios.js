@@ -1,5 +1,6 @@
 import { defineBoot } from '#q-app/wrappers'
 import axios from 'axios'
+import { useUserStore } from 'src/stores/user-store'
 
 // Be careful when using SSR for cross-request state pollution
 // due to creating a Singleton instance here;
@@ -9,12 +10,18 @@ import axios from 'axios'
 // for each client)
 const api = axios.create({ baseURL: 'http://localhost:3000/' })
 
-export default defineBoot(({ app }) => {
+export default defineBoot(({ app, store }) => {
   // for use inside Vue files (Options API) through this.$axios and this.$api
 
   app.config.globalProperties.$axios = axios
   // ^ ^ ^ this will allow you to use this.$axios (for Vue Options API form)
   //       so you won't necessarily have to import axios in each vue file
+
+  api.interceptors.request.use((config) => {
+    const userStore = useUserStore(store)
+    config.headers['X-User-Id'] = userStore.currentUser?.id
+    return config
+  })
 
   app.config.globalProperties.$api = api
   // ^ ^ ^ this will allow you to use this.$api (for Vue Options API form)
