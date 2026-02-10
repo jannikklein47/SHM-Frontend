@@ -6,6 +6,7 @@ const routes = [
       { path: '', component: () => import('pages/UserSelectPage.vue') },
       { path: 'dashboard', component: () => import('pages/DashboardPage.vue') },
       { path: 'device/:id', component: () => import('pages/DeviceDetailsPage.vue') },
+      { path: 'profile', component: () => import('pages/ProfilePage.vue') },
     ],
   },
   // Always leave this as last one,
