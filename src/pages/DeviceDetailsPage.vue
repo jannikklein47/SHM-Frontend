@@ -361,7 +361,10 @@
             color="secondary"
             label="Save"
             @click="createMeasurement"
-            :disable="!newMeasurementData.value || !newMeasurementData.threshold"
+            :disable="
+              (!newMeasurementData.value && newMeasurementData.value !== 0) ||
+              !newMeasurementData.threshold
+            "
           />
         </q-card-actions>
       </q-card>
