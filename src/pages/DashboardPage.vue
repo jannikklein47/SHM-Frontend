@@ -291,7 +291,7 @@
                   </q-item-section>
                 </q-item>
 
-                <q-item clickable @click="openInviteDialog(house.id)">
+                <q-item clickable @click="openInviteDialog(currentViewingHouseId)">
                   <q-item-section avatar
                     ><q-avatar color="grey-3" text-color="secondary" icon="person_add"
                   /></q-item-section>
