@@ -9,7 +9,7 @@
     </q-header>
 
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
-      <q-item-label header> Seiten </q-item-label>
+      <q-item-label header> Pages </q-item-label>
       <EssentialLink
         title="Dashboard"
         caption="Overview on Households, Rooms and Devices"

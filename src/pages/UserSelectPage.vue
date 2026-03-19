@@ -15,7 +15,7 @@
             <q-item-section avatar>
               <q-icon name="person" color="primary" />
             </q-item-section>
-            <q-item-section>{{ user.vorname }} {{ user.nachname }}</q-item-section>
+            <q-item-section>{{ user.name }} {{ user.surname }}</q-item-section>
             <q-item-section side>ID: {{ user.id }}</q-item-section>
           </q-item>
         </q-list>
@@ -31,14 +31,14 @@
         <div class="text-weight-bold q-mb-sm">Create New User:</div>
         <q-form @submit.prevent="createUser" class="q-gutter-md">
           <q-input
-            v-model="newUser.vorname"
+            v-model="newUser.name"
             label="First Name"
             dense
             outlined
             :rules="[(val) => !!val || 'Required']"
           />
           <q-input
-            v-model="newUser.nachname"
+            v-model="newUser.surname"
             label="Last Name"
             dense
             outlined
@@ -68,12 +68,12 @@ const userStore = useUserStore()
 
 const users = ref([])
 const loading = ref(false)
-const newUser = ref({ vorname: '', nachname: '' })
+const newUser = ref({ name: '', surname: '' })
 
 // Fetch users on load
 const fetchUsers = async () => {
   try {
-    const res = await api.get('/nutzer')
+    const res = await api.get('/user')
     users.value = res.data
   } catch (err) {
     console.error('Error fetching users', err)
@@ -88,7 +88,7 @@ const selectUser = (user) => {
 const createUser = async () => {
   loading.value = true
   try {
-    const res = await api.post('/nutzer', newUser.value)
+    const res = await api.post('/user', newUser.value)
     // Backend returns the new user object
     selectUser(res.data)
   } catch (err) {

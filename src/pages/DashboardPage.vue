@@ -16,7 +16,7 @@
         style="border-radius: 8px"
         icon="home"
         :label="house.name"
-        :caption="house.adresse"
+        :caption="house.address"
         header-class="bg-grey-2"
         default-opened
       >
@@ -26,7 +26,7 @@
           </q-item-section>
           <q-item-section>
             <q-item-label>{{ house.name }}</q-item-label>
-            <q-item-label caption>{{ house.adresse }}</q-item-label>
+            <q-item-label caption>{{ house.address }}</q-item-label>
           </q-item-section>
 
           <q-item-section side>
@@ -140,14 +140,31 @@
                         class="rounded-borders q-my-xs bg-grey-1"
                       >
                         <q-item-section avatar>
-                          <q-icon name="sensors" color="accent" />
+                          <q-icon :name="device.icon" color="accent" />
                         </q-item-section>
-                        <q-item-section>
+                        <q-item-section class="q-py-sm">
                           <q-item-label>{{ device.name }}</q-item-label>
-                          <q-item-label caption>{{ device.schnittstelle }}</q-item-label>
+                          <q-item-label caption>
+                            {{
+                              device.latestoperationtype
+                                ? device.latestoperationtype + ' ' + device.lateststatename
+                                : 'Unknown State'
+                            }}
+                            - Connected via {{ device.interfacename }}</q-item-label
+                          >
                         </q-item-section>
                         <q-item-section side>
                           <div class="row items-center q-gutter-xs">
+                            <q-btn
+                              icon="power_settings_new"
+                              flat
+                              dense
+                              round
+                              size="sm"
+                              color="primary"
+                              @click.stop="openCommandDialog(device.id, device.devicetypeid)"
+                              ><q-tooltip>Send a Command</q-tooltip></q-btn
+                            >
                             <q-btn
                               flat
                               round
@@ -202,23 +219,23 @@
               <q-timeline-entry
                 v-for="log in house.logs.slice(0, 1)"
                 :key="log.id"
-                :title="log.beschreibung"
-                :subtitle="formatDate(log.zeitpunkt)"
+                :title="log.description"
+                :subtitle="formatDate(log.timestamp)"
                 :icon="getLogIcon(log)"
                 :color="getLogColor(log)"
               >
                 <div class="text-caption text-grey-7">
-                  <span v-if="log.nutzer_vorname">
-                    <strong>{{ log.nutzer_vorname }} {{ log.nutzer_nachname }}</strong>
+                  <span v-if="log.username">
+                    <strong>{{ log.username }} {{ log.usersurname }}</strong>
                   </span>
-                  <span v-if="log.geraet_name">
-                    Device: <strong>{{ log.geraet_name }}</strong>
+                  <span v-if="log.devicename">
+                    Device: <strong>{{ log.devicename }}</strong>
                   </span>
-                  <span v-if="log.raum_name">
-                    Room: <strong>{{ log.raum_name }}</strong>
+                  <span v-if="log.roomname">
+                    Room: <strong>{{ log.roomname }}</strong>
                   </span>
-                  <span v-if="log.sensor_id">
-                    Sensor ID: <strong>{{ log.sensor_id }}</strong>
+                  <span v-if="log.sensorid">
+                    Sensor ID: <strong>{{ log.sensorid }}</strong>
                   </span>
                 </div>
               </q-timeline-entry>
@@ -242,22 +259,22 @@
                   </q-item-section>
 
                   <q-item-section>
-                    <q-item-label> {{ member.vorname }} {{ member.nachname }}</q-item-label>
+                    <q-item-label> {{ member.name }} {{ member.surname }}</q-item-label>
                     <q-item-label caption>Permission Level</q-item-label>
                   </q-item-section>
 
                   <q-item-section side>
                     <q-badge
-                      :color="member.verwaltet ? 'negative' : 'blue'"
-                      :label="member.verwaltet ? 'Admin' : 'Member'"
+                      :color="member.manages ? 'negative' : 'blue'"
+                      :label="member.manages ? 'Admin' : 'Member'"
                     />
                   </q-item-section>
                   <q-item-section
                     side
                     v-if="
-                      !member.verwaltet &&
+                      !member.manages &&
                       member.id !== currentUser?.id &&
-                      householdMembers.find((member) => member.id === currentUser?.id).verwaltet ===
+                      householdMembers.find((member) => member.id === currentUser?.id).manages ===
                         true
                     "
                   >
@@ -274,8 +291,8 @@
                     side
                     v-if="
                       member.id !== currentUser.id &&
-                      !member.verwaltet &&
-                      householdMembers.find((member) => member.id === currentUser?.id).verwaltet ===
+                      !member.manages &&
+                      householdMembers.find((member) => member.id === currentUser?.id).manages ===
                         true
                     "
                   >
@@ -332,7 +349,7 @@
         <q-card-section><div class="text-h6">New Household</div></q-card-section>
         <q-card-section class="q-gutter-md">
           <q-input v-model="newHouseData.name" label="House Name" outlined dense />
-          <q-input v-model="newHouseData.adresse" label="Address" outlined dense />
+          <q-input v-model="newHouseData.address" label="Address" outlined dense />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />
@@ -436,7 +453,7 @@
         <q-card-section class="q-pt-none">
           <q-input
             v-model="editDeviceData.name"
-            label="Neuer Name"
+            label="New Name"
             outlined
             dense
             autofocus
@@ -444,8 +461,8 @@
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Abbrechen" v-close-popup />
-          <q-btn color="secondary" label="Änderungen speichern" @click="updateDevice" />
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn color="secondary" label="Save" @click="updateDevice" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -456,7 +473,7 @@
         <q-card-section class="q-gutter-md">
           <q-input v-model="newRoomData.name" label="Room Name" outlined dense />
           <q-select
-            v-model="newRoomData.raum_typ_id"
+            v-model="newRoomData.roomTypeId"
             :options="roomTypes"
             option-value="id"
             option-label="name"
@@ -491,7 +508,7 @@
           />
 
           <q-select
-            v-model="newDeviceData.geraet_typ_id"
+            v-model="newDeviceData.deviceTypeId"
             :options="deviceTypes"
             option-value="id"
             option-label="name"
@@ -502,11 +519,16 @@
             map-options
           />
 
-          <q-input
-            v-model="newDeviceData.schnittstelle"
-            label="Interface (e.g., Zigbee, WiFi, MQTT)"
+          <q-select
+            v-model="newDeviceData.interfaceId"
+            :options="interfaces"
+            option-value="id"
+            option-label="name"
+            label="Interface"
             outlined
             dense
+            emit-value
+            map-options
           />
         </q-card-section>
 
@@ -516,7 +538,7 @@
             color="secondary"
             label="Add Device"
             @click="createDevice"
-            :disable="!newDeviceData.name || !newDeviceData.geraet_typ_id"
+            :disable="!newDeviceData.name || !newDeviceData.deviceTypeId"
           />
         </q-card-actions>
       </q-card>
@@ -538,7 +560,7 @@
             v-model="selectedUserToInvite"
             :options="allUsers"
             option-value="id"
-            :option-label="(opt) => `${opt.vorname} ${opt.nachname} (ID: ${opt.id})`"
+            :option-label="(opt) => `${opt.name} ${opt.surname} (ID: ${opt.id})`"
             label="Search User"
             outlined
             dense
@@ -582,7 +604,7 @@
                 <q-item-label>{{ house.name }}</q-item-label>
               </q-item-section>
               <q-item-section side>
-                <q-item-label caption>{{ house.adresse }}</q-item-label>
+                <q-item-label caption>{{ house.address }}</q-item-label>
               </q-item-section>
               <q-item-section side>
                 <q-btn
@@ -616,6 +638,103 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <q-dialog
+      v-model="showAddOperationDialog"
+      @show="allCombinationsAnimation = true"
+      @before-hide="allCombinationsAnimation = false"
+    >
+      <q-card style="min-width: 350px; max-height: 80vh">
+        <q-card-section class="bg-primary text-white flex">
+          <div class="text-h6">Send a Command</div>
+          <q-space />
+          <q-btn flat dense round icon="close" v-close-popup />
+        </q-card-section>
+
+        <q-card-section>
+          <q-select
+            v-model="newOperationData.type_id"
+            :options="switchingTypes"
+            option-value="id"
+            option-label="name"
+            label="Action"
+            outlined
+            dense
+            emit-value
+            map-options
+            @update:model-value="newOperationData.state_id = null"
+            class="q-mb-md"
+          />
+
+          <q-select
+            v-if="newOperationData.type_id"
+            v-model="newOperationData.state_id"
+            :options="stateTypes.filter((st) => st.operationtypeid === newOperationData.type_id)"
+            option-value="id"
+            option-label="name"
+            label="State"
+            outlined
+            dense
+            emit-value
+            map-options
+            class="q-mb-md"
+          />
+          <span v-else class="text-subtitle2 text-grey-7">
+            Choose an action before setting the state.
+          </span>
+        </q-card-section>
+
+        <q-card-section>
+          <q-expansion-item
+            label="What types of commands does this device support?"
+            expand-separator
+            style="border-radius: 10px"
+            class="bg-grey-2"
+            v-model="allCombinationsAnimation"
+          >
+            <q-separator />
+            <q-list separator>
+              <q-item v-for="command in allCommandCombinations" :key="command">
+                <q-item-section>
+                  <span style="display: flex; gap: 4px; align-items: center">
+                    <span class="text-bold">{{ command.operationtypename }}</span>
+                    {{ command.statename }}
+                    <q-space />
+                    <q-btn
+                      label="Choose"
+                      flat
+                      no-caps
+                      rounded
+                      class="bg-white"
+                      @click="
+                        () => {
+                          newOperationData.type_id = command.operationtypeid
+                          newOperationData.state_id = command.stateid
+                        }
+                      "
+                    />
+                  </span>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-expansion-item>
+        </q-card-section>
+
+        <q-card-section class="flex">
+          <q-btn flat label="Cancel" v-close-popup class="bg-grey-2" style="border-radius: 10px" />
+          <q-space />
+          <q-btn
+            style="border-radius: 10px"
+            color="secondary"
+            label="Send"
+            flat
+            class="bg-grey-2"
+            @click="createOperation"
+            :disable="!newOperationData.type_id || !newOperationData.state_id"
+          />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -637,7 +756,7 @@ const loading = ref(true)
 
 // Dialog Controls
 const showAddHouse = ref(false)
-const newHouseData = ref({ name: '', adresse: '' })
+const newHouseData = ref({ name: '', address: '' })
 
 const showEditHouseDialog = ref(false)
 const editHouseData = ref({ id: null, name: '' })
@@ -662,12 +781,22 @@ const editDeviceData = ref({ id: null, name: '' })
 
 const showAddRoom = ref(false)
 const targetHouseId = ref(null)
-const newRoomData = ref({ name: '', raum_typ_id: null })
+const newRoomData = ref({ name: '', roomTypeId: null, interfaceId: null })
 
 const currentUser = computed(() => userStore.currentUser)
 
 const showHistoryDialog = ref(false)
 const showHistoryData = ref({ logs: [], name: '' })
+
+const stateTypes = ref([])
+const switchingTypes = ref([])
+const newOperationData = ref({
+  type_id: null,
+  state_id: null,
+})
+const showAddOperationDialog = ref(false)
+const allCommandCombinations = ref([])
+const allCombinationsAnimation = ref(false)
 
 // Main Data Fetch
 const fetchDashboardData = async () => {
@@ -676,49 +805,57 @@ const fetchDashboardData = async () => {
 
   try {
     // 1. Get Households
-    const hRes = await api.get(`/haushalt/${userStore.currentUser.id}`)
+    const hRes = await api.get(`/household/${userStore.currentUser.id}`)
     const rawHouses = hRes.data
+
+    console.log('households:', rawHouses)
 
     // 2. Hydrate each house with Rooms and Devices
     // Note: Doing this in a loop for simplicity, but Promise.all is better for performance
     const hydratedHouses = await Promise.all(
       rawHouses.map(async (house) => {
-        const houseId = house.haushalt_id || house.id // Handle join result variance
+        const houseId = house.householdid || house.id // Handle join result variance
 
         // Get Rooms
-        const rRes = await api.get(`/raum/${houseId}`)
+        const rRes = await api.get(`/room/${houseId}`)
         const rooms = rRes.data
+
+        console.log('rooms:', rooms)
 
         // NEU HINZUFÜGEN: Zähler vom Server holen
         let roomCounts = []
         try {
-          const countRes = await api.get(`/roomDeviceCount/${houseId}`)
+          const countRes = await api.get(`/household/deviceCount/${houseId}`)
           roomCounts = countRes.data
         } catch (e) {
-          console.warn('Konnte Raum-Statistik nicht laden', e)
+          console.warn('Could not load room device stats', e)
         }
 
         // Get Devices (API returns all devices for a house)
-        const dRes = await api.get(`/geraet/${houseId}`)
+        const dRes = await api.get(`/device/household/${houseId}`)
         const allDevices = dRes.data
 
-        const mRes = await api.get('/haushaltzuordnung/' + houseId)
+        console.log('devices', allDevices)
+
+        const mRes = await api.get('/householdAssignment/' + houseId)
         const members = mRes.data
 
-        const amIAdmin = members.find((m) => m.id === currentUser.value.id).verwaltet === true
+        const amIAdmin = members.find((m) => m.id === currentUser.value.id).manages === true
 
-        const logs = (await api.get('/verlauf/' + houseId)).data
+        const logs = (await api.get('/history/' + houseId)).data
 
         // Map devices into rooms locally
         const roomsWithDevices = rooms.map((room) => {
           const countEntry = roomCounts.find((c) => c.id === room.id)
-          const totalCount = countEntry ? countEntry.anzahl_geraete : 0
+          const totalCount = countEntry ? countEntry.devicecount : 0
           return {
             ...room,
             totalDeviceCount: totalCount,
-            devices: allDevices.filter((d) => d.raum_id === room.id),
+            devices: allDevices.filter((d) => d.roomid === room.id),
           }
         })
+
+        console.log(roomsWithDevices)
 
         return {
           ...house,
@@ -742,12 +879,11 @@ const fetchDashboardData = async () => {
 // Actions
 const createHouse = async () => {
   try {
-    await api.post('/haushalt', {
-      nutzerId: userStore.currentUser.id,
+    await api.post('/household', {
       ...newHouseData.value,
     })
     showAddHouse.value = false
-    newHouseData.value = { name: '', adresse: '' }
+    newHouseData.value = { name: '', address: '' }
     fetchDashboardData() // Refresh
   } catch (err) {
     console.error(err)
@@ -763,7 +899,7 @@ const updateHouse = async () => {
   console.log('Updating house:', editHouseData.value)
   if (!editHouseData.value.name) return
   try {
-    await api.patch(`/haushalt/${editHouseData.value.id}`, { name: editHouseData.value.name })
+    await api.patch(`/household/${editHouseData.value.id}`, { name: editHouseData.value.name })
     showEditHouseDialog.value = false
     $q.notify({ color: 'positive', message: 'Household renamed.', icon: 'check' })
     fetchDashboardData()
@@ -779,7 +915,7 @@ const openDeleteHouse = (house) => {
 
 const deleteHouse = async () => {
   try {
-    await api.delete(`/haushalt/${deleteHouseData.value.id}`)
+    await api.delete(`/household/${deleteHouseData.value.id}`)
     showDeleteHouseDialog.value = false
     $q.notify({ color: 'positive', message: 'Household renamed.', icon: 'check' })
     fetchDashboardData()
@@ -790,7 +926,7 @@ const deleteHouse = async () => {
 
 const openLeaveHouse = async (house) => {
   let onlyOneAdmin = false
-  const result = await api.get('/deleteAccount?nutzer_id=' + userStore.currentUser.id)
+  const result = await api.get('/user/delete')
   for (const houseWithOneAdmin of result.data) {
     if (houseWithOneAdmin.id === house.id) {
       onlyOneAdmin = true
@@ -803,7 +939,7 @@ const openLeaveHouse = async (house) => {
 const leaveHouse = async () => {
   try {
     await api.delete(
-      `/haushaltzuordnung/${leaveHouseData.value.id}?nutzer_id=${userStore.currentUser.id}&deleteHouse=${leaveHouseData.value.onlyOneAdmin}`,
+      `/householdAssignment/${leaveHouseData.value.id}?userId=${userStore.currentUser.id}&deleteHouse=${leaveHouseData.value.onlyOneAdmin}`,
     )
     showLeaveHouseDialog.value = false
     $q.notify({ color: 'positive', message: 'Left household.', icon: 'check' })
@@ -822,7 +958,7 @@ const updateRoom = async () => {
   console.log('Updating Room:', editRoomData.value)
   if (!editRoomData.value.name) return
   try {
-    await api.patch(`/raum/${editRoomData.value.id}`, { name: editRoomData.value.name })
+    await api.patch(`/room/${editRoomData.value.id}`, { name: editRoomData.value.name })
     showEditRoomDialog.value = false
     $q.notify({ color: 'positive', message: 'Room renamed.', icon: 'check' })
     fetchDashboardData()
@@ -838,7 +974,7 @@ const openDeleteRoom = (room) => {
 
 const deleteRoom = async () => {
   try {
-    await api.delete(`/raum/${deleteRoomData.value.id}`)
+    await api.delete(`/room/${deleteRoomData.value.id}`)
     showDeleteRoomDialog.value = false
     $q.notify({ color: 'positive', message: 'Room deleted.', icon: 'check' })
     fetchDashboardData()
@@ -855,7 +991,7 @@ const openEditDevice = (device) => {
 const updateDevice = async () => {
   if (!editDeviceData.value.name || !editDeviceData.value.name.trim()) return
   try {
-    await api.patch(`/geraet/${editDeviceData.value.id}`, {
+    await api.patch(`/device/${editDeviceData.value.id}`, {
       name: editDeviceData.value.name.trim(),
     })
     showEditDeviceDialog.value = false
@@ -874,9 +1010,9 @@ const openAddRoom = (houseId) => {
 
 const createRoom = async () => {
   try {
-    await api.post(`/raum/${targetHouseId.value}`, newRoomData.value)
+    await api.post(`/room/${targetHouseId.value}`, newRoomData.value)
     showAddRoom.value = false
-    newRoomData.value = { name: '', raum_typ_id: null }
+    newRoomData.value = { name: '', roomTypeId: null }
     fetchDashboardData() // Refresh
   } catch (err) {
     console.error(err)
@@ -890,18 +1026,20 @@ const goToDevice = (deviceId) => {
 // --- New State for Device Creation ---
 const showAddDevice = ref(false)
 const targetRoomId = ref(null)
-const deviceTypes = ref([]) // To be filled from /typen
+const deviceTypes = ref([])
+const interfaces = ref([])
 const newDeviceData = ref({
   name: '',
-  geraet_typ_id: null,
-  schnittstelle: '',
+  deviceTypeId: null,
+  interfaceId: '',
 })
 
 // Update fetchTypes to include device types
 const fetchTypes = async () => {
-  const res = await api.get('/typen')
-  roomTypes.value = res.data.raum_typ
-  deviceTypes.value = res.data.geraet_typ // Store device types
+  const res = await api.get('/type')
+  roomTypes.value = res.data.roomType
+  deviceTypes.value = res.data.deviceType // Store device types
+  interfaces.value = res.data.interface
 }
 
 // --- New Action: Open Dialog ---
@@ -914,15 +1052,15 @@ const openAddDevice = (roomId) => {
 const createDevice = async () => {
   try {
     // Matches your route: app.post("/geraet/:raum_id", ...)
-    await api.post(`/geraet/${targetRoomId.value}`, {
+    await api.post(`/device/${targetRoomId.value}`, {
       name: newDeviceData.value.name,
-      geraet_typ_id: newDeviceData.value.geraet_typ_id,
-      schnittstelle: newDeviceData.value.schnittstelle,
+      deviceTypeId: newDeviceData.value.deviceTypeId,
+      interfaceId: newDeviceData.value.interfaceId,
     })
 
     // Reset and Refresh
     showAddDevice.value = false
-    newDeviceData.value = { name: '', geraet_typ_id: null, schnittstelle: '' }
+    newDeviceData.value = { name: '', deviceTypeId: null, interfaceId: null }
 
     $q.notify({ color: 'positive', message: 'Device added successfully' })
     fetchDashboardData()
@@ -945,7 +1083,7 @@ const openInviteDialog = async (houseId) => {
   showInviteDialog.value = true
 
   try {
-    const res = await api.get('/nutzer')
+    const res = await api.get('/user')
     // Filter out the current user so they don't invite themselves
     allUsers.value = res.data.filter(
       (u) =>
@@ -962,8 +1100,8 @@ const sendInvite = async () => {
 
   try {
     // Matches your route: app.post("/haushaltzuordnung/:haushalt_id", ...)
-    await api.post(`/haushaltzuordnung/${targetHouseIdForInvite.value}`, {
-      nutzerId: selectedUserToInvite.value,
+    await api.post(`/householdAssignment/${targetHouseIdForInvite.value}`, {
+      userId: selectedUserToInvite.value,
     })
 
     showInviteDialog.value = false
@@ -982,9 +1120,7 @@ const sendInvite = async () => {
 
 const openDeleteAccount = async () => {
   try {
-    deleteAccountData.value.housesThatWillBeDeleted = (
-      await api.get('/deleteAccount?nutzer_id=' + userStore.currentUser.id)
-    ).data
+    deleteAccountData.value.housesThatWillBeDeleted = (await api.get('/user/delete')).data
     showDeleteAccountDialog.value = true
     console.log(deleteAccountData.value.housesThatWillBeDeleted)
   } catch (error) {
@@ -994,7 +1130,7 @@ const openDeleteAccount = async () => {
 
 const deleteAccount = async () => {
   try {
-    await api.delete('/deleteAccount?nutzer_id=' + userStore.currentUser.id)
+    await api.delete('/user/delete')
     $q.notify({ type: 'positive', message: 'Account deleted successfully' })
     userStore.logout()
   } catch (error) {
@@ -1015,7 +1151,7 @@ const openMemberList = async (house) => {
   showMemberList.value = true
 
   try {
-    const res = await api.get(`/haushaltzuordnung/${house.id}`)
+    const res = await api.get(`/householdAssignment/${house.id}`)
 
     householdMembers.value = res.data
   } catch (err) {
@@ -1025,7 +1161,7 @@ const openMemberList = async (house) => {
 
 const removeFromHousehold = async (userId, houseId) => {
   try {
-    const res = await api.delete(`/haushaltzuordnung/${houseId}?nutzer_id=${userId}`)
+    const res = await api.delete(`/householdAssignment/${houseId}?nutzer_id=${userId}`)
 
     if (res.status === 200) {
       showMemberList.value = false
@@ -1047,9 +1183,9 @@ const removeFromHousehold = async (userId, houseId) => {
 
 const assignAdmin = async (userId, houseId) => {
   try {
-    const res = await api.patch('/haushaltzuordnung/' + houseId, {
-      nutzer_id: userId,
-      verwaltet: true,
+    const res = await api.patch('/householdAssignment/' + houseId, {
+      userId: userId,
+      manages: true,
     })
 
     if (res.status === 200) {
@@ -1066,6 +1202,50 @@ const assignAdmin = async (userId, houseId) => {
     $q.notify({
       type: 'negative',
       message: 'Failed to assign user as admin',
+    })
+  }
+}
+
+const openCommandDialog = async (deviceId, deviceTypeId) => {
+  showAddOperationDialog.value = true
+  newOperationData.value.type_id = null
+  newOperationData.value.state_id = null
+  newOperationData.value.deviceId = deviceId
+
+  const typesRes = await api.get('/type?deviceTypeId=' + deviceTypeId)
+
+  console.log('types:', typesRes.data)
+
+  switchingTypes.value = typesRes.data.operationType
+  stateTypes.value = typesRes.data.state
+  allCommandCombinations.value = typesRes.data.allCombinations
+}
+
+const createOperation = async () => {
+  try {
+    await api.post('/operation', {
+      deviceId: newOperationData.value.deviceId,
+      typeId: newOperationData.value.type_id,
+      stateId: newOperationData.value.state_id,
+    })
+
+    $q.notify({
+      color: 'positive',
+      message: 'Command sent successfully',
+      icon: 'check',
+    })
+
+    showAddOperationDialog.value = false
+    newOperationData.value = { type_id: null, state_id: null }
+
+    // Refresh data to show new entry in table
+    fetchDashboardData()
+  } catch (err) {
+    console.error('Error creating command:', err)
+    $q.notify({
+      color: 'negative',
+      message: 'Failed to send command',
+      icon: 'error',
     })
   }
 }

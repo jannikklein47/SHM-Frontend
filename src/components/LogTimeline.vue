@@ -4,23 +4,23 @@
       <q-timeline-entry
         v-for="log in logs"
         :key="log.id"
-        :title="log.beschreibung"
-        :subtitle="formatDate(log.zeitpunkt)"
+        :title="log.description"
+        :subtitle="formatDate(log.timestamp)"
         :icon="getLogIcon(log)"
         :color="getLogColor(log)"
       >
         <div class="text-caption text-grey-7">
-          <span v-if="log.nutzer_vorname">
-            <strong>{{ log.nutzer_vorname }} {{ log.nutzer_nachname }}</strong>
+          <span v-if="log.username">
+            <strong>{{ log.username }} {{ log.usersurname }}</strong>
           </span>
-          <span v-if="log.geraet_name">
-            Device: <strong>{{ log.geraet_name }}</strong>
+          <span v-if="log.devicename">
+            Device: <strong>{{ log.devicename }}</strong>
           </span>
-          <span v-if="log.raum_name">
-            Room: <strong>{{ log.raum_name }}</strong>
+          <span v-if="log.roomname">
+            Room: <strong>{{ log.roomname }}</strong>
           </span>
-          <span v-if="log.sensor_id">
-            Sensor ID: <strong>{{ log.sensor_id }}</strong>
+          <span v-if="log.sensorid">
+            Sensor ID: <strong>{{ log.sensorid }}</strong>
           </span>
         </div>
       </q-timeline-entry>
