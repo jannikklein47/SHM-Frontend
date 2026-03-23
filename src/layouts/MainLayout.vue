@@ -1,6 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
+    <q-header elevated v-if="$route.name !== 'login'">
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
 
@@ -8,8 +8,8 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
-      <q-item-label header> Seiten </q-item-label>
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered v-if="$route.name !== 'login'">
+      <q-item-label header> Pages </q-item-label>
       <EssentialLink
         title="Dashboard"
         caption="Overview on Households, Rooms and Devices"

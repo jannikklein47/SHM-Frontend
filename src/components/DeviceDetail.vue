@@ -2,10 +2,10 @@
   <q-card flat bordered class="device-info-card shadow-1">
     <q-card-section class="bg-blue-grey-1 row justify-between">
       <div class="row items-center no-wrap">
-        <q-icon name="sensors" color="accent" size="md" class="q-mr-md" />
+        <q-icon :name="device.icon" color="accent" size="md" class="q-mr-md" />
         <div>
-          <div class="text-h6">{{ $props.device.name }}</div>
-          <div class="text-caption text-grey-8">ID: {{ $props.device.id }}</div>
+          <div class="text-h6">{{ device.name }}</div>
+          <div class="text-caption text-grey-8">ID: {{ device.id }}</div>
         </div>
       </div>
 
@@ -46,7 +46,7 @@
         <q-item-section>
           <q-item-label caption>Device Type</q-item-label>
           <q-item-label class="text-weight-medium">
-            {{ deviceTypeName }}
+            {{ device.devicetypename || 'N/A' }}
           </q-item-label>
         </q-item-section>
       </q-item>
@@ -57,7 +57,7 @@
         </q-item-section>
         <q-item-section>
           <q-item-label caption>Interface</q-item-label>
-          <q-item-label>{{ $props.device.schnittstelle || 'N/A' }}</q-item-label>
+          <q-item-label>{{ device.interface || 'N/A' }}</q-item-label>
         </q-item-section>
       </q-item>
 
@@ -67,7 +67,7 @@
         </q-item-section>
         <q-item-section>
           <q-item-label caption>Sensors</q-item-label>
-          <q-item-label>{{ $props.sensors.length }}</q-item-label>
+          <q-item-label>{{ sensors.length }}</q-item-label>
         </q-item-section>
       </q-item>
 
@@ -77,7 +77,7 @@
         </q-item-section>
         <q-item-section>
           <q-item-label caption>Room Assignment</q-item-label>
-          <q-item-label>Room ID: {{ $props.device.raum_id }}</q-item-label>
+          <q-item-label>Room ID: {{ device.roomid }}</q-item-label>
         </q-item-section>
       </q-item>
 
@@ -87,7 +87,7 @@
         </q-item-section>
         <q-item-section>
           <q-item-label caption>Registered On</q-item-label>
-          <q-item-label>{{ formatTimestamp($props.device.erstellt_am) }}</q-item-label>
+          <q-item-label>{{ formatTimestamp(device.createdat) }}</q-item-label>
         </q-item-section>
       </q-item>
     </q-card-section>
@@ -129,7 +129,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { api } from 'boot/axios'
 import { date, useQuasar } from 'quasar'
 
@@ -141,7 +141,7 @@ const deleteDeviceData = ref({ id: null, name: '' })
 
 const $q = useQuasar()
 
-const props = defineProps({
+defineProps({
   device: {
     type: Object,
     required: true,
@@ -157,17 +157,11 @@ const emit = defineEmits(['updated', 'deleted'])
 
 const deviceTypes = ref([])
 
-// Resolve the geraet_typ_id to a name
-const deviceTypeName = computed(() => {
-  const type = deviceTypes.value.find((t) => t.id === props.device.geraet_typ_id)
-  return type ? type.name : `Type ${props.device.geraet_typ_id}`
-})
-
 // Fetch the type names from your /typen route
 const fetchDeviceTypes = async () => {
   try {
-    const res = await api.get('/typen')
-    deviceTypes.value = res.data.geraet_typ
+    const res = await api.get('/type')
+    deviceTypes.value = res.data.deviceType
   } catch (err) {
     console.error('Could not fetch device types', err)
   }
@@ -187,7 +181,7 @@ const openEditDevice = (device) => {
 const updateDevice = async () => {
   if (!editDeviceData.value.name || !editDeviceData.value.name.trim()) return
   try {
-    await api.patch(`/geraet/${editDeviceData.value.id}`, {
+    await api.patch(`/device/${editDeviceData.value.id}`, {
       name: editDeviceData.value.name.trim(),
     })
     showEditDeviceDialog.value = false
@@ -206,7 +200,7 @@ const openDeleteDevice = (device) => {
 
 const deleteDevice = async () => {
   try {
-    await api.delete(`/geraet/${deleteDeviceData.value.id}`)
+    await api.delete(`/device/${deleteDeviceData.value.id}`)
     showDeleteDeviceDialog.value = false
     $q.notify({ color: 'positive', message: 'Device deleted.', icon: 'check' })
     emit('deleted')

@@ -25,11 +25,11 @@
                 {
                   name: 'time',
                   label: 'Time',
-                  field: 'zeitpunkt',
+                  field: 'timestamp',
                   align: 'left',
                   format: (val) => formatDate(val),
                 },
-                { name: 'type', label: 'Action', field: 'schaltvorgang_typ_id', align: 'left' },
+                { name: 'type', label: 'Action', field: 'operationtypeid', align: 'left' },
                 { name: 'state', label: 'Resulting State', field: 'name', align: 'center' },
               ]"
               row-key="id"
@@ -67,47 +67,108 @@
               </div>
             </div>
 
-            <q-dialog v-model="showAddOperationDialog">
-              <q-card style="min-width: 350px">
-                <q-card-section>
-                  <div class="text-h6">Record Operation</div>
+            <q-dialog
+              v-model="showAddOperationDialog"
+              @show="allCombinationsAnimation = true"
+              @before-hide="allCombinationsAnimation = false"
+            >
+              <q-card style="min-width: 350px; max-height: 80vh">
+                <q-card-section class="bg-primary text-white flex">
+                  <div class="text-h6">Send a Command</div>
+                  <q-space />
+                  <q-btn flat dense round icon="close" v-close-popup />
                 </q-card-section>
 
-                <q-card-section class="q-gutter-md">
+                <q-card-section>
                   <q-select
                     v-model="newOperationData.type_id"
                     :options="switchingTypes"
                     option-value="id"
                     option-label="name"
-                    label="Operation Type (e.g. Manual)"
+                    label="Action"
                     outlined
                     dense
                     emit-value
                     map-options
+                    @update:model-value="newOperationData.state_id = null"
+                    class="q-mb-md"
                   />
 
                   <q-select
+                    v-if="newOperationData.type_id"
                     v-model="newOperationData.state_id"
-                    :options="stateTypes"
+                    :options="
+                      stateTypes.filter((st) => st.operationtypeid === newOperationData.type_id)
+                    "
                     option-value="id"
                     option-label="name"
-                    label="Resulting State (e.g. ON)"
+                    label="State"
                     outlined
                     dense
                     emit-value
                     map-options
+                    class="q-mb-md"
                   />
+                  <span v-else class="text-subtitle2 text-grey-7">
+                    Choose an action before setting the state.
+                  </span>
                 </q-card-section>
 
-                <q-card-actions align="right">
-                  <q-btn flat label="Cancel" v-close-popup />
+                <q-card-section>
+                  <q-expansion-item
+                    label="What types of commands does this device support?"
+                    expand-separator
+                    style="border-radius: 10px"
+                    class="bg-grey-2"
+                    v-model="allCombinationsAnimation"
+                  >
+                    <q-separator />
+                    <q-list separator>
+                      <q-item v-for="command in allCommandCombinations" :key="command">
+                        <q-item-section>
+                          <span style="display: flex; gap: 4px; align-items: center">
+                            <span class="text-bold">{{ command.operationtypename }}</span>
+                            {{ command.statename }}
+                            <q-space />
+                            <q-btn
+                              label="Choose"
+                              flat
+                              no-caps
+                              rounded
+                              class="bg-white"
+                              @click="
+                                () => {
+                                  newOperationData.type_id = command.operationtypeid
+                                  newOperationData.state_id = command.stateid
+                                }
+                              "
+                            />
+                          </span>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-expansion-item>
+                </q-card-section>
+
+                <q-card-section class="flex">
                   <q-btn
+                    flat
+                    label="Cancel"
+                    v-close-popup
+                    class="bg-grey-2"
+                    style="border-radius: 10px"
+                  />
+                  <q-space />
+                  <q-btn
+                    style="border-radius: 10px"
                     color="secondary"
-                    label="Save"
+                    label="Send"
+                    flat
+                    class="bg-grey-2"
                     @click="createOperation"
                     :disable="!newOperationData.type_id || !newOperationData.state_id"
                   />
-                </q-card-actions>
+                </q-card-section>
               </q-card>
             </q-dialog>
 
@@ -127,17 +188,17 @@
                 {
                   name: 'time',
                   label: 'Time',
-                  field: 'zeitpunkt',
+                  field: 'timestamp',
                   align: 'left',
                   format: (val) => formatDate(val),
                 },
-                { name: 'type', label: 'Sensor Type', field: 'messart', align: 'left' },
-                { name: 'val', label: 'Value', field: 'wert', align: 'right' },
-                { name: 'limit', label: 'Threshold', field: 'schwellenwert', align: 'right' },
+                { name: 'type', label: 'Sensor Type', field: 'sensortype', align: 'left' },
+                { name: 'val', label: 'Value', field: 'value', align: 'right' },
+                { name: 'limit', label: 'Threshold', field: 'threshold', align: 'right' },
                 {
                   name: 'percent',
                   label: 'Exceeded by',
-                  field: 'ueberschreitung_prozent',
+                  field: 'exceededpercent',
                   align: 'right',
                 },
               ]"
@@ -200,23 +261,26 @@
             </q-card-section>
 
             <q-card-section class="bg-secondary text-white">
-              <q-btn
-                flat
-                dense
-                round
-                icon="add_chart"
-                color="white"
-                style="background-color: rgba(255, 255, 255, 0.2)"
-                class="q-mr-sm"
-                @click="openAddMeasurementDialog(sensor)"
-              >
-                <q-tooltip>Add Measurement</q-tooltip>
-              </q-btn>
               <div class="row items-center justify-between">
                 <div class="row items-center q-gutter-x-sm">
-                  <span class="text-h6"> {{ getSensorTypeName(sensor.sensor_typ_id) }}</span>
+                  <span class="text-h6"> {{ getSensorTypeName(sensor.sensortypeid) }}</span>
                   <span class="text-caption">ID: {{ sensor.id }}</span>
                 </div>
+
+                <q-space />
+
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="add_chart"
+                  color="white"
+                  style="background-color: rgba(255, 255, 255, 0.2)"
+                  class="q-mr-sm"
+                  @click="openAddMeasurementDialog(sensor)"
+                >
+                  <q-tooltip>Add Measurement</q-tooltip>
+                </q-btn>
 
                 <q-btn
                   flat
@@ -232,13 +296,6 @@
               </div>
             </q-card-section>
 
-            <q-card-section class="bg-secondary text-white">
-              <div class="row items-center justify-between">
-                <span class="text-h6"> {{ getSensorTypeName(sensor.sensor_typ_id) }}</span>
-                <span class="text-caption">Sensor ID: {{ sensor.id }}</span>
-              </div>
-            </q-card-section>
-
             <q-card-section>
               <q-table
                 flat
@@ -248,12 +305,12 @@
                   {
                     name: 'time',
                     label: 'Timestamp',
-                    field: 'zeitpunkt',
+                    field: 'timestamp',
                     align: 'left',
                     format: (val) => formatDate(val),
                   },
-                  { name: 'val', label: 'Value', field: 'wert', align: 'right' },
-                  { name: 'limit', label: 'Threshold', field: 'schwellenwert', align: 'right' },
+                  { name: 'val', label: 'Value', field: 'value', align: 'right' },
+                  { name: 'limit', label: 'Threshold', field: 'threshold', align: 'right' },
                   { name: 'diff', label: 'Status', align: 'center' },
                 ]"
                 row-key="id"
@@ -262,7 +319,7 @@
                 <template v-slot:body-cell-diff="props">
                   <q-td :props="props">
                     <q-icon
-                      v-if="parseFloat(props.row.wert) >= parseFloat(props.row.schwellenwert)"
+                      v-if="parseFloat(props.row.value) >= parseFloat(props.row.threshold)"
                       name="error"
                       color="negative"
                       size="sm"
@@ -277,7 +334,7 @@
                   <q-td :props="props">
                     <div
                       :class="
-                        parseFloat(props.value) > parseFloat(props.row.schwellenwert)
+                        parseFloat(props.value) > parseFloat(props.row.threshold)
                           ? 'text-red text-bold'
                           : ''
                       "
@@ -305,7 +362,7 @@
 
         <q-card-section class="q-pt-none">
           <q-select
-            v-model="newSensorData.sensor_typ_id"
+            v-model="newSensorData.sensorTypeId"
             :options="sensorTypes"
             option-value="id"
             option-label="name"
@@ -323,7 +380,7 @@
             color="secondary"
             label="Create"
             @click="createSensor"
-            :disable="!newSensorData.sensor_typ_id"
+            :disable="!newSensorData.sensorTypeId"
           />
         </q-card-actions>
       </q-card>
@@ -405,6 +462,8 @@ const formatDate = (val) => {
   return date.formatDate(val, 'MMM D, HH:mm')
 }
 
+const interfaces = ref([])
+
 const route = useRoute()
 const loading = ref(true)
 const sensors = ref([])
@@ -423,41 +482,52 @@ const getSensorTypeName = (id) => {
 
 // --- New State for Switching Processes ---
 const switchingLogs = ref([])
-const switchingTypes = ref([]) // From /typen (schaltvorgang_typ)
+const switchingTypes = ref([])
+const allCombinationsAnimation = ref(false)
+const allCommandCombinations = ref([])
 
 const loadDeviceData = async () => {
   loading.value = true
   try {
-    // 1. Get Types
-    const typesRes = await api.get('/typen')
-    sensorTypes.value = typesRes.data.sensor_typ
-    switchingTypes.value = typesRes.data.schaltvorgang_typ
-    stateTypes.value = typesRes.data.zustand // <--- NEW: Store states
-
     // ... existing sensor loading logic ...
     const sensorRes = await api.get(`/sensor/${route.params.id}`)
     const sensorList = sensorRes.data
     sensors.value = await Promise.all(
       sensorList.map(async (s) => {
-        const mRes = await api.get(`/messungen/${s.id}`)
+        const mRes = await api.get(`/measurement/${s.id}`)
         return { ...s, measurements: mRes.data }
       }),
     )
 
+    console.log('Sensors:', sensors.value)
+
     // ... existing switching logs logic ...
-    const schaltRes = await api.get(`/schaltvorgaenge/${route.params.id}`)
+    const schaltRes = await api.get(`/operation/${route.params.id}`)
     switchingLogs.value = schaltRes.data
 
     // ... existing device loading logic ...
-    const deviceRes = await api.get(`/geraetId/${route.params.id}`)
+    const deviceRes = await api.get(`/device/${route.params.id}`)
+
     device.value = deviceRes.data
 
-    const avgRes = await api.get(`/averageReading/${route.params.id}`)
+    console.log('Device:', device.value)
+
+    const typesRes = await api.get('/type?deviceTypeId=' + (device.value.devicetypeid || ''))
+
+    console.log('types:', typesRes.data)
+
+    sensorTypes.value = typesRes.data.sensorType
+    switchingTypes.value = typesRes.data.operationType
+    stateTypes.value = typesRes.data.state
+    allCommandCombinations.value = typesRes.data.allCombinations
+    interfaces.value = typesRes.data.interface
+
+    const avgRes = await api.get(`/device/averageReading/${route.params.id}`)
     averageReadings.value = avgRes.data
-    const devStatsRes = await api.get(`/deviceSensorAverageDifference/${route.params.id}`)
+    const devStatsRes = await api.get(`/device/averageSensorDiff/${route.params.id}`)
     averageDeviations.value = devStatsRes.data
 
-    const alarmRes = await api.get(`/deviceAlarmStats/${route.params.id}`)
+    const alarmRes = await api.get(`/device/alarmStats/${route.params.id}`)
     alarmStats.value = alarmRes.data
   } catch (err) {
     console.error('Error loading device full data', err)
@@ -476,19 +546,19 @@ const $q = useQuasar()
 // State for Add Sensor Dialog
 const showAddSensorDialog = ref(false)
 const newSensorData = ref({
-  sensor_typ_id: null,
+  sensorTypeId: null,
 })
 
 // Function to create a new sensor
 const createSensor = async () => {
   try {
     await api.post('/sensor', {
-      sensor_typ_id: newSensorData.value.sensor_typ_id,
-      geraet_id: route.params.id, // ID from url (/device/:id)
+      sensorTypeId: newSensorData.value.sensorTypeId,
+      deviceId: route.params.id, // ID from url (/device/:id)
     })
 
     showAddSensorDialog.value = false
-    newSensorData.value.sensor_typ_id = null
+    newSensorData.value.sensorTypeId = null
 
     // Success notification
     $q.notify({
@@ -570,10 +640,10 @@ const openAddMeasurementDialog = (sensor) => {
 const createMeasurement = async () => {
   try {
     // Matches our new English backend route /measurement
-    await api.post('/messungen', {
-      sensor_id: targetSensorId.value,
-      wert: newMeasurementData.value.value,
-      schwellenwert: newMeasurementData.value.threshold,
+    await api.post('/measurement', {
+      sensorId: targetSensorId.value,
+      value: newMeasurementData.value.value,
+      threshold: newMeasurementData.value.threshold,
     })
 
     // UI Feedback
@@ -613,10 +683,10 @@ const newOperationData = ref({
 // --- NEW ACTION: Create Operation ---
 const createOperation = async () => {
   try {
-    await api.post('/operations', {
-      device_id: route.params.id,
-      type_id: newOperationData.value.type_id,
-      state_id: newOperationData.value.state_id,
+    await api.post('/operation', {
+      deviceId: route.params.id,
+      typeId: newOperationData.value.type_id,
+      stateId: newOperationData.value.state_id,
     })
 
     $q.notify({
@@ -629,6 +699,7 @@ const createOperation = async () => {
     newOperationData.value = { type_id: null, state_id: null }
 
     // Refresh data to show new entry in table
+    allCombinationsAnimation.value = false
     loadDeviceData()
   } catch (err) {
     console.error('Error creating operation:', err)
@@ -642,14 +713,14 @@ const createOperation = async () => {
 
 const getAverageValue = (sensorId) => {
   const item = averageReadings.value.find((x) => x.id === sensorId)
-  if (!item || !item.durchschnittswert) return null
-  return parseFloat(item.durchschnittswert).toFixed(2)
+  if (!item || !item.averagereading) return null
+  return parseFloat(item.averagereading).toFixed(2)
 }
 
 const getAverageDeviation = (sensorId) => {
   const item = averageDeviations.value.find((x) => x.id === sensorId)
-  if (!item || item.durchschnitt === null || item.durchschnitt === undefined) return null
-  return parseFloat(item.durchschnitt).toFixed(2)
+  if (!item || item.average === null || item.average === undefined) return null
+  return parseFloat(item.average).toFixed(2)
 }
 
 onMounted(loadDeviceData)
