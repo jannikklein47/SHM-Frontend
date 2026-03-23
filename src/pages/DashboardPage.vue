@@ -273,8 +273,8 @@
                     side
                     v-if="
                       !member.manages &&
-                      member.id !== currentUser?.id &&
-                      householdMembers.find((member) => member.id === currentUser?.id).manages ===
+                      member.id !== currentUser?.sub &&
+                      householdMembers.find((member) => member.id === currentUser?.sub).manages ===
                         true
                     "
                   >
@@ -290,9 +290,9 @@
                   <q-item-section
                     side
                     v-if="
-                      member.id !== currentUser.id &&
+                      member.id !== currentUser.sub &&
                       !member.manages &&
-                      householdMembers.find((member) => member.id === currentUser?.id).manages ===
+                      householdMembers.find((member) => member.id === currentUser?.sub).manages ===
                         true
                     "
                   >
@@ -783,7 +783,7 @@ const showAddRoom = ref(false)
 const targetHouseId = ref(null)
 const newRoomData = ref({ name: '', roomTypeId: null, interfaceId: null })
 
-const currentUser = computed(() => userStore.currentUser)
+const currentUser = computed(() => userStore.user)
 
 const showHistoryDialog = ref(false)
 const showHistoryData = ref({ logs: [], name: '' })
@@ -800,12 +800,12 @@ const allCombinationsAnimation = ref(false)
 
 // Main Data Fetch
 const fetchDashboardData = async () => {
-  if (!userStore.currentUser) return router.push('/')
+  if (!userStore.user) return router.push('/')
   loading.value = true
 
   try {
     // 1. Get Households
-    const hRes = await api.get(`/household/${userStore.currentUser.id}`)
+    const hRes = await api.get(`/household/${userStore.user.sub}`)
     const rawHouses = hRes.data
 
     console.log('households:', rawHouses)
@@ -840,7 +840,7 @@ const fetchDashboardData = async () => {
         const mRes = await api.get('/householdAssignment/' + houseId)
         const members = mRes.data
 
-        const amIAdmin = members.find((m) => m.id === currentUser.value.id).manages === true
+        const amIAdmin = members.find((m) => m.id === currentUser.value.sub).manages === true
 
         const logs = (await api.get('/history/' + houseId)).data
 
@@ -939,7 +939,7 @@ const openLeaveHouse = async (house) => {
 const leaveHouse = async () => {
   try {
     await api.delete(
-      `/householdAssignment/${leaveHouseData.value.id}?userId=${userStore.currentUser.id}&deleteHouse=${leaveHouseData.value.onlyOneAdmin}`,
+      `/householdAssignment/${leaveHouseData.value.id}?userId=${userStore.user.sub}&deleteHouse=${leaveHouseData.value.onlyOneAdmin}`,
     )
     showLeaveHouseDialog.value = false
     $q.notify({ color: 'positive', message: 'Left household.', icon: 'check' })
@@ -1086,9 +1086,7 @@ const openInviteDialog = async (houseId) => {
     const res = await api.get('/user')
     // Filter out the current user so they don't invite themselves
     allUsers.value = res.data.filter(
-      (u) =>
-        u.id !== userStore.currentUser.id &&
-        !householdMembers.value.map((u) => u.id).includes(u.id),
+      (u) => u.id !== userStore.user.sub && !householdMembers.value.map((u) => u.id).includes(u.id),
     )
   } catch (err) {
     console.error('Error fetching users for invitation', err)

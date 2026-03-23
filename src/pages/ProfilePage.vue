@@ -13,7 +13,7 @@
           />
 
           <div class="text-h5 q-mt-md">
-            {{ userStore.currentUser?.name }} {{ userStore.currentUser?.surname }}
+            {{ userStore.user?.name }} {{ userStore.user?.surname }}
           </div>
           <div class="text-caption text-grey-8 q-mb-md">Smart Home Enthusiast</div>
 
@@ -21,7 +21,7 @@
 
           <div class="row text-left q-gutter-y-xs q-mt-md">
             <div class="col-12">
-              <q-icon name="fingerprint" class="q-mr-sm" /> ID: {{ userStore.currentUser?.id }}
+              <q-icon name="fingerprint" class="q-mr-sm" /> ID: {{ userStore.user?.sub }}
             </div>
           </div>
 
@@ -203,7 +203,7 @@ const logout = () => {
 
 const fetchStats = async () => {
   try {
-    const res = await api.get('/profile/' + userStore.currentUser.id)
+    const res = await api.get('/profile/' + userStore.user.sub)
 
     console.log(res)
 
