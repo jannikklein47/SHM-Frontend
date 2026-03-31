@@ -33,14 +33,16 @@ export const useUserStore = defineStore('user', {
         } else return error.message
       }
     },
-    async register(email, password) {
+    async register(email, password, name, surname) {
       try {
-        const result = await auth.post('/login/register', {
+        const result = await auth.post('/register', {
           username: email,
           password: password,
+          name: name,
+          surname: surname,
         })
 
-        if (result.status === 200) {
+        if (result.status === 201) {
           return true
         } else {
           return result.status

@@ -1,38 +1,44 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <q-header elevated v-if="$route.name !== 'login'">
-      <q-toolbar>
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
-
-        <q-toolbar-title> Smart Home Manager </q-toolbar-title>
+  <q-layout view="hHh Lpr lFf">
+    <q-header
+      style="
+        background-color: #ffffffdd;
+        backdrop-filter: blur(10px);
+        filter: saturate(3);
+        box-shadow: 0 0 12px #00000022;
+      "
+      v-if="$route.name !== 'login' && $route.name !== 'register'"
+    >
+      <q-toolbar class="text-black q-py-md q-px-lg">
+        <q-toolbar-title style="flex-direction: row; display: flex">
+          <span class="text-weight-bolder q-mr-md">Smart-Home-Manager</span>
+          <span class="text-grey-8">{{ $route.name }}</span>
+          <q-separator vertical class="q-mx-md" />
+          <q-btn
+            label="Dashboard"
+            flat
+            dense
+            no-caps
+            to="/dashboard"
+            color="grey-7"
+            class="text-weight-light"
+            v-if="$route.name !== 'Dashboard'"
+          />
+          <q-btn
+            label="Profile"
+            flat
+            dense
+            no-caps
+            to="/profile"
+            class="text-weight-light"
+            color="grey-7"
+            v-if="$route.name !== 'Profile'"
+          />
+          <q-space />
+          <q-btn label="Logout" flat dense no-caps @click="logout" />
+        </q-toolbar-title>
       </q-toolbar>
     </q-header>
-
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered v-if="$route.name !== 'login'">
-      <q-item-label header> Pages </q-item-label>
-      <EssentialLink
-        title="Dashboard"
-        caption="Overview on Households, Rooms and Devices"
-        icon="home"
-        link="/dashboard"
-      />
-      <EssentialLink
-        title="Profile"
-        caption="Your Information and Settings"
-        icon="account_circle"
-        link="/profile"
-      />
-
-      <q-item clickable @click="logout">
-        <q-item-section avatar>
-          <q-icon name="exit_to_app" />
-        </q-item-section>
-
-        <q-item-section>
-          <q-item-label>Logout</q-item-label>
-        </q-item-section>
-      </q-item>
-    </q-drawer>
 
     <q-page-container>
       <router-view />
@@ -42,7 +48,6 @@
 
 <script setup>
 import { ref } from 'vue'
-import EssentialLink from 'components/EssentialLink.vue'
 import { useUserStore } from 'src/stores/user-store'
 import { useRouter } from 'vue-router'
 
