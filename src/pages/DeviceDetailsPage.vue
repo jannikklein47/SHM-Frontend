@@ -1,13 +1,108 @@
 <template>
   <q-page class="q-pa-md">
-    <q-btn flat icon="arrow_back" label="Back to Dashboard" to="/dashboard" class="q-mb-md" />
-
     <device-detail
       :device="device"
       :sensors="sensors"
       @updated="loadDeviceData"
       @deleted="$router.back()"
     />
+
+    <div class="q-mt-xl">
+      <div class="row items-center justify-between q-mb-md">
+        <div class="text-h5">Installed Sensors</div>
+        <q-btn
+          icon="add"
+          label="Add Sensor"
+          flat
+          rounded
+          no-caps
+          style="background-color: #00000011"
+          @click="showAddSensorDialog = true"
+        />
+      </div>
+
+      <q-card v-for="sensor in sensors" :key="sensor.id" class="q-my-lg" flat bordered>
+        <q-card-section
+          v-if="getAverageValue(sensor.id)"
+          class="bg-blue-1 text-blue-9"
+          style="border-bottom: 1px solid #bbdefb"
+        >
+          <div class="row items-center">
+            <q-icon name="functions" class="q-mr-sm" size="sm" />
+            <div class="text-body2">
+              <strong>Historical average:</strong> All measurements from this sensor yield an
+              average value of <strong>{{ getAverageValue(sensor.id) }}</strong
+              >.
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section
+          v-if="getAverageDeviation(sensor.id)"
+          class="bg-orange-1 text-orange-9"
+          style="border-bottom: 1px solid #ffe0b2"
+        >
+          <div class="row items-center">
+            <q-icon name="warning" class="q-mr-sm" size="sm" />
+            <div class="text-body2">
+              <strong>Alarm Severity:</strong> When this sensor triggers an alarm, it exceeds the
+              threshold by an average of <strong>{{ getAverageDeviation(sensor.id) }}%</strong>.
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section class="bg-secondary text-white">
+          <div class="row items-center justify-between">
+            <div class="row items-center q-gutter-x-sm">
+              <span class="text-h6"> {{ getSensorTypeName(sensor.sensortypeid) }}</span>
+              <span class="text-caption">Threshold for Alarms: {{ sensor.threshold }}</span>
+            </div>
+
+            <q-space />
+
+            <q-btn
+              flat
+              label="Measurement"
+              no-caps
+              rounded
+              icon="add_chart"
+              color="white"
+              style="background-color: rgba(255, 255, 255, 0.2)"
+              class="q-mr-sm"
+              @click="openAddMeasurementDialog(sensor)"
+            >
+              <q-tooltip>Add Measurement</q-tooltip>
+            </q-btn>
+
+            <q-btn
+              flat
+              rounded
+              no-caps
+              label="Delete"
+              icon="delete"
+              color="negative"
+              style="background-color: rgba(255, 0, 0, 0.2)"
+              @click="openDeleteSensorDialog(sensor)"
+            >
+              <q-tooltip>Delete Sensor</q-tooltip>
+            </q-btn>
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <VueApexCharts
+            :options="sensor.options"
+            :series="sensor.series"
+            type="line"
+            height="350"
+          />
+        </q-card-section>
+      </q-card>
+
+      <div v-if="sensors.length === 0" class="col-12 text-grey">
+        No sensors found for this device.
+      </div>
+    </div>
 
     <div v-if="loading" class="flex flex-center">
       <q-spinner color="primary" size="3em" />
@@ -57,11 +152,12 @@
               <div class="row items-center justify-between q-mb-md">
                 <q-space />
                 <q-btn
-                  class="q-mr-md"
-                  color="secondary"
+                  class="q-mr-md bg-grey-2"
+                  no-caps
                   icon="add"
                   label="Add Operation"
-                  size="sm"
+                  flat
+                  rounded
                   @click="showAddOperationDialog = true"
                 />
               </div>
@@ -118,7 +214,7 @@
                   <q-expansion-item
                     label="What types of commands does this device support?"
                     expand-separator
-                    style="border-radius: 10px"
+                    style="border-radius: 12px"
                     class="bg-grey-2"
                     v-model="allCombinationsAnimation"
                   >
@@ -151,16 +247,10 @@
                 </q-card-section>
 
                 <q-card-section class="flex">
-                  <q-btn
-                    flat
-                    label="Cancel"
-                    v-close-popup
-                    class="bg-grey-2"
-                    style="border-radius: 10px"
-                  />
+                  <q-btn flat label="Cancel" v-close-popup class="bg-grey-2" rounded />
                   <q-space />
                   <q-btn
-                    style="border-radius: 10px"
+                    rounded
                     color="secondary"
                     label="Send"
                     flat
@@ -194,7 +284,6 @@
                 },
                 { name: 'type', label: 'Sensor Type', field: 'sensortype', align: 'left' },
                 { name: 'val', label: 'Value', field: 'value', align: 'right' },
-                { name: 'limit', label: 'Threshold', field: 'threshold', align: 'right' },
                 {
                   name: 'percent',
                   label: 'Exceeded by',
@@ -216,147 +305,12 @@
             </q-table>
           </q-card>
         </div>
-
-        <div class="q-mt-xl">
-          <div class="row items-center justify-between q-mb-md">
-            <div class="text-h5">Installed Sensors</div>
-            <q-btn
-              color="secondary"
-              icon="add"
-              label="Add Sensor"
-              size="sm"
-              @click="showAddSensorDialog = true"
-            />
-          </div>
-
-          <q-card v-for="sensor in sensors" :key="sensor.id" class="q-my-lg" flat bordered>
-            <q-card-section
-              v-if="getAverageValue(sensor.id)"
-              class="bg-blue-1 text-blue-9"
-              style="border-bottom: 1px solid #bbdefb"
-            >
-              <div class="row items-center">
-                <q-icon name="functions" class="q-mr-sm" size="sm" />
-                <div class="text-body2">
-                  <strong>Historical average:</strong> All measurements from this sensor yield an
-                  average value of <strong>{{ getAverageValue(sensor.id) }}</strong
-                  >.
-                </div>
-              </div>
-            </q-card-section>
-
-            <q-card-section
-              v-if="getAverageDeviation(sensor.id)"
-              class="bg-orange-1 text-orange-9"
-              style="border-bottom: 1px solid #ffe0b2"
-            >
-              <div class="row items-center">
-                <q-icon name="warning" class="q-mr-sm" size="sm" />
-                <div class="text-body2">
-                  <strong>Alarm Severity:</strong> When this sensor triggers an alarm, it exceeds
-                  the threshold by an average of
-                  <strong>{{ getAverageDeviation(sensor.id) }}%</strong>.
-                </div>
-              </div>
-            </q-card-section>
-
-            <q-card-section class="bg-secondary text-white">
-              <div class="row items-center justify-between">
-                <div class="row items-center q-gutter-x-sm">
-                  <span class="text-h6"> {{ getSensorTypeName(sensor.sensortypeid) }}</span>
-                  <span class="text-caption">ID: {{ sensor.id }}</span>
-                </div>
-
-                <q-space />
-
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="add_chart"
-                  color="white"
-                  style="background-color: rgba(255, 255, 255, 0.2)"
-                  class="q-mr-sm"
-                  @click="openAddMeasurementDialog(sensor)"
-                >
-                  <q-tooltip>Add Measurement</q-tooltip>
-                </q-btn>
-
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="delete"
-                  color="negative"
-                  style="background-color: rgba(255, 255, 255, 0.2)"
-                  @click="openDeleteSensorDialog(sensor)"
-                >
-                  <q-tooltip>Delete Sensor</q-tooltip>
-                </q-btn>
-              </div>
-            </q-card-section>
-
-            <q-card-section>
-              <q-table
-                flat
-                bordered
-                :rows="sensor.measurements"
-                :columns="[
-                  {
-                    name: 'time',
-                    label: 'Timestamp',
-                    field: 'timestamp',
-                    align: 'left',
-                    format: (val) => formatDate(val),
-                  },
-                  { name: 'val', label: 'Value', field: 'value', align: 'right' },
-                  { name: 'limit', label: 'Threshold', field: 'threshold', align: 'right' },
-                  { name: 'diff', label: 'Status', align: 'center' },
-                ]"
-                row-key="id"
-                :pagination="{ rowsPerPage: 10 }"
-              >
-                <template v-slot:body-cell-diff="props">
-                  <q-td :props="props">
-                    <q-icon
-                      v-if="parseFloat(props.row.value) >= parseFloat(props.row.threshold)"
-                      name="error"
-                      color="negative"
-                      size="sm"
-                    >
-                      <q-tooltip>Above Threshold</q-tooltip>
-                    </q-icon>
-                    <q-icon v-else name="check_circle" color="positive" size="sm" />
-                  </q-td>
-                </template>
-
-                <template v-slot:body-cell-val="props">
-                  <q-td :props="props">
-                    <div
-                      :class="
-                        parseFloat(props.value) > parseFloat(props.row.threshold)
-                          ? 'text-red text-bold'
-                          : ''
-                      "
-                    >
-                      {{ props.value }}
-                    </div>
-                  </q-td>
-                </template>
-              </q-table>
-            </q-card-section>
-          </q-card>
-
-          <div v-if="sensors.length === 0" class="col-12 text-grey">
-            No sensors found for this device.
-          </div>
-        </div>
       </div>
     </div>
 
     <q-dialog v-model="showAddSensorDialog">
       <q-card style="min-width: 350px">
-        <q-card-section>
+        <q-card-section class="bg-primary text-white q-mb-md">
           <div class="text-h6">Add New Sensor</div>
         </q-card-section>
 
@@ -371,25 +325,37 @@
             dense
             emit-value
             map-options
+            class="q-mb-md"
+          />
+          <q-input
+            v-model="newSensorData.threshold"
+            label="Threshold (Limit)"
+            type="number"
+            outlined
+            dense
           />
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup no-caps rounded class="bg-grey-2" />
           <q-btn
             color="secondary"
+            class="bg-grey-2"
             label="Create"
+            flat
+            no-caps
+            rounded
             @click="createSensor"
-            :disable="!newSensorData.sensorTypeId"
+            :disable="!newSensorData.sensorTypeId || newSensorData.threshold === null"
           />
         </q-card-actions>
       </q-card>
     </q-dialog>
     <q-dialog v-model="showAddMeasurementDialog">
       <q-card style="min-width: 350px">
-        <q-card-section>
+        <q-card-section class="bg-primary text-white q-mb-md">
           <div class="text-h6">Record New Measurement</div>
-          <div class="text-caption text-grey">Sensor ID: {{ targetSensorId }}</div>
+          <div class="text-caption text-grey-4">Sensor ID: {{ targetSensorId }}</div>
         </q-card-section>
 
         <q-card-section class="q-gutter-md">
@@ -401,27 +367,18 @@
             dense
             autofocus
           />
-
-          <q-input
-            v-model.number="newMeasurementData.threshold"
-            label="Threshold (Limit)"
-            type="number"
-            outlined
-            dense
-            hint="At what value is this critical?"
-          />
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup class="bg-grey-2" rounded />
           <q-btn
             color="secondary"
+            rounded
             label="Save"
+            class="bg-grey-2"
+            flat
             @click="createMeasurement"
-            :disable="
-              (!newMeasurementData.value && newMeasurementData.value !== 0) ||
-              !newMeasurementData.threshold
-            "
+            :disable="newMeasurementData.value === null"
           />
         </q-card-actions>
       </q-card>
@@ -429,7 +386,7 @@
 
     <q-dialog v-model="showDeleteSensorDialog">
       <q-card style="min-width: 350px">
-        <q-card-section>
+        <q-card-section class="bg-negative text-white q-mb-md">
           <div class="text-h6">Delete Sensor</div>
         </q-card-section>
 
@@ -439,8 +396,15 @@
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="CANCEL" v-close-popup />
-          <q-btn color="negative" label="DELETE PERMANENTLY" @click="deleteSensor" />
+          <q-btn flat label="Cancel" v-close-popup no-caps rounded class="bg-grey-2" />
+          <q-btn
+            color="negative"
+            label="DELETE PERMANENTLY"
+            @click="deleteSensor"
+            flat
+            rounded
+            class="bg-red-1"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -451,6 +415,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from 'boot/axios'
+import VueApexCharts from 'vue3-apexcharts'
 
 // import { date } from 'quasar'
 import { date, useQuasar } from 'quasar'
@@ -495,7 +460,93 @@ const loadDeviceData = async () => {
     sensors.value = await Promise.all(
       sensorList.map(async (s) => {
         const mRes = await api.get(`/measurement/${s.id}`)
-        return { ...s, measurements: mRes.data }
+        return {
+          ...s,
+          measurements: mRes.data,
+          series: [
+            {
+              name: 'Measurements',
+              data: mRes.data.map((m) => {
+                return [new Date(m.timestamp), m.value]
+              }),
+            },
+          ],
+          options: {
+            chart: {
+              type: 'line',
+            },
+            // 1. The Threshold Line
+            annotations: {
+              yaxis: [
+                {
+                  y: s.threshold,
+                  borderColor: '#FF0000',
+                  label: {
+                    borderColor: '#FF0000',
+                    style: { color: '#fff', background: '#FF0000' },
+                    text: 'Threshold',
+                  },
+                },
+                {
+                  y: s.threshold,
+                  y2: 10000, // A high number ensures it covers the top of the chart
+                  borderColor: '#FF0000',
+                  fillColor: '#FF0000',
+                  opacity: 0.1, // Keep it light so you can still see the grid/line
+                },
+              ],
+            },
+            // 2. Color the line based on the threshold
+            stroke: {
+              width: 3,
+              curve: 'smooth',
+            },
+            xaxis: {
+              type: 'datetime',
+              labels: {
+                show: true,
+                rotate: -45, // Rotate if labels are long
+                style: {
+                  colors: '#78909C', // Custom color (use Quasar variables if needed)
+                  fontSize: '12px',
+                  fontFamily: 'Helvetica, Arial, sans-serif',
+                },
+                datetimeFormatter: {
+                  year: 'yyyy',
+                  month: "MMM 'yy",
+                  day: 'dd MMM',
+                  hour: 'dd MMM HH:mm', // <--- This forces the day to show with the hour
+                },
+              },
+            },
+            yaxis: {
+              min: 0,
+            },
+            tooltip: {
+              custom: function ({ series, seriesIndex, dataPointIndex, w }) {
+                const customElement = document.createElement('div')
+                console.log(w)
+                const value = series[seriesIndex][dataPointIndex]
+                customElement.style.padding = '10px'
+                const top = document.createElement('div')
+                const bot = document.createElement('div')
+                const sub = document.createElement('div')
+                top.innerText = 'Measurement: ' + value
+                bot.innerText = value >= s.threshold ? 'This Measurement Caused an Alarm.' : ''
+                sub.innerText =
+                  'Time: ' + new Date(w.seriesData.seriesX[0][dataPointIndex]).toLocaleString()
+                top.style.color = value >= s.threshold ? 'red' : 'green'
+                bot.classList.add('text-weight-light')
+                top.classList.add('text-weight-bold')
+                sub.classList.add('text-weight-light', 'text-italic', 'text-caption')
+                customElement.appendChild(top)
+                customElement.appendChild(bot)
+                customElement.appendChild(sub)
+                return customElement
+              },
+            },
+          },
+        }
       }),
     )
 
@@ -547,6 +598,7 @@ const $q = useQuasar()
 const showAddSensorDialog = ref(false)
 const newSensorData = ref({
   sensorTypeId: null,
+  threshold: null,
 })
 
 // Function to create a new sensor
@@ -554,11 +606,13 @@ const createSensor = async () => {
   try {
     await api.post('/sensor', {
       sensorTypeId: newSensorData.value.sensorTypeId,
+      threshold: newSensorData.value.threshold,
       deviceId: route.params.id, // ID from url (/device/:id)
     })
 
     showAddSensorDialog.value = false
     newSensorData.value.sensorTypeId = null
+    newSensorData.value.threshold = null
 
     // Success notification
     $q.notify({
@@ -643,7 +697,6 @@ const createMeasurement = async () => {
     await api.post('/measurement', {
       sensorId: targetSensorId.value,
       value: newMeasurementData.value.value,
-      threshold: newMeasurementData.value.threshold,
     })
 
     // UI Feedback

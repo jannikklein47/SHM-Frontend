@@ -74,23 +74,24 @@
             </div>
           </q-item-section>
         </template>
-        <q-card class="bg-grey-1">
+        <q-card class="bg-grey-2">
           <q-card-section>
             <div class="row items-center justify-between q-mb-sm">
               <div class="text-h6">Rooms</div>
               <q-btn
                 flat
-                dense
                 color="secondary"
                 icon="add"
                 no-caps
+                class="bg-white"
+                rounded
                 label="Add Room"
                 @click="openAddRoom(house.id)"
               />
             </div>
 
             <div class="row q-col-gutter-md">
-              <div v-for="room in house.rooms" :key="room.id" class="col-12 col-md-6 col-lg-4">
+              <div v-for="room in house.rooms" :key="room.id" class="col-12 col-md-6">
                 <q-card bordered class="my-card" flat>
                   <q-card-section class="bg-primary text-white q-py-sm flex items-center">
                     <div class="text-subtitle1">{{ room.name }}</div>
@@ -242,125 +243,148 @@
             </q-timeline>
           </q-card-section>
         </q-card>
-
-        <q-dialog v-model="showMemberList">
-          <q-card style="min-width: 500px">
-            <q-card-section class="row items-center q-pb-none">
-              <div class="text-h6">Members: {{ currentViewingHouseName }}</div>
-              <q-space />
-              <q-btn icon="close" flat round dense v-close-popup />
-            </q-card-section>
-
-            <q-card-section>
-              <q-list bordered separator class="rounded-borders">
-                <q-item v-for="member in householdMembers" :key="member.id">
-                  <q-item-section avatar>
-                    <q-avatar color="grey-3" text-color="primary" icon="person" />
-                  </q-item-section>
-
-                  <q-item-section>
-                    <q-item-label> {{ member.name }} {{ member.surname }}</q-item-label>
-                    <q-item-label caption>Permission Level</q-item-label>
-                  </q-item-section>
-
-                  <q-item-section side>
-                    <q-badge
-                      :color="member.manages ? 'negative' : 'blue'"
-                      :label="member.manages ? 'Admin' : 'Member'"
-                    />
-                  </q-item-section>
-                  <q-item-section
-                    side
-                    v-if="
-                      !member.manages &&
-                      member.id !== currentUser?.sub &&
-                      householdMembers.find((member) => member.id === currentUser?.sub).manages ===
-                        true
-                    "
-                  >
-                    <q-btn
-                      icon="close"
-                      flat
-                      dense
-                      @click="removeFromHousehold(member.id, currentViewingHouseId)"
-                    >
-                      <q-tooltip class="text-body2">Remove from Household</q-tooltip>
-                    </q-btn>
-                  </q-item-section>
-                  <q-item-section
-                    side
-                    v-if="
-                      member.id !== currentUser.sub &&
-                      !member.manages &&
-                      householdMembers.find((member) => member.id === currentUser?.sub).manages ===
-                        true
-                    "
-                  >
-                    <q-btn
-                      flat
-                      dense
-                      color="secondary"
-                      icon="key"
-                      @click="assignAdmin(member.id, currentViewingHouseId)"
-                    >
-                      <q-tooltip class="text-body2">Assign Admin</q-tooltip>
-                    </q-btn>
-                  </q-item-section>
-                </q-item>
-
-                <q-item clickable @click="openInviteDialog(currentViewingHouseId)">
-                  <q-item-section avatar
-                    ><q-avatar color="grey-3" text-color="secondary" icon="person_add"
-                  /></q-item-section>
-                  <q-item-section>Invite a user to this Household</q-item-section>
-                </q-item>
-
-                <q-item v-if="householdMembers.length === 0">
-                  <q-item-section class="text-grey italic">No access data found.</q-item-section>
-                </q-item>
-              </q-list>
-            </q-card-section>
-
-            <q-card-actions align="right">
-              <q-btn flat label="Close" color="primary" v-close-popup />
-            </q-card-actions>
-          </q-card>
-        </q-dialog>
       </q-expansion-item>
     </div>
 
     <q-btn
       color="primary"
       icon="add"
+      flat
       label="New House"
-      class="q-mt-md"
+      class="q-mt-md bg-grey-2"
+      rounded
       no-caps
       @click="showAddHouse = true"
     />
 
     <q-btn
       label="Delete account"
-      class="q-mt-md q-ml-md bg-negative text-white"
+      color="negative"
+      flat
+      class="q-mt-md bg-red-1 q-ml-md"
+      rounded
       @click="openDeleteAccount"
     />
 
+    <q-dialog v-model="showMemberList">
+      <q-card style="min-width: 500px">
+        <q-card-section class="row items-center q-mb-sm bg-primary text-white">
+          <div class="text-h6">Members: {{ currentViewingHouseName }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section>
+          <q-list bordered separator class="rounded-borders">
+            <q-item v-for="member in householdMembers" :key="member.id">
+              <q-item-section avatar>
+                <q-avatar color="grey-3" text-color="primary" icon="person" />
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label> {{ member.name }} {{ member.surname }}</q-item-label>
+                <q-item-label caption>Permission Level</q-item-label>
+              </q-item-section>
+
+              <q-item-section side>
+                <q-badge
+                  :color="member.manages ? 'negative' : 'blue'"
+                  :label="member.manages ? 'Admin' : 'Member'"
+                />
+              </q-item-section>
+              <q-item-section
+                side
+                v-if="
+                  !member.manages &&
+                  member.id !== currentUser?.sub &&
+                  householdMembers.find((member) => member.id === currentUser?.sub).manages === true
+                "
+              >
+                <q-btn
+                  icon="close"
+                  flat
+                  dense
+                  @click="removeFromHousehold(member.id, currentViewingHouseId)"
+                >
+                  <q-tooltip class="text-body2">Remove from Household</q-tooltip>
+                </q-btn>
+              </q-item-section>
+              <q-item-section
+                side
+                v-if="
+                  member.id !== currentUser.sub &&
+                  !member.manages &&
+                  householdMembers.find((member) => member.id === currentUser?.sub).manages === true
+                "
+              >
+                <q-btn
+                  flat
+                  dense
+                  color="secondary"
+                  icon="key"
+                  @click="assignAdmin(member.id, currentViewingHouseId)"
+                >
+                  <q-tooltip class="text-body2">Assign Admin</q-tooltip>
+                </q-btn>
+              </q-item-section>
+            </q-item>
+
+            <q-item clickable @click="openInviteDialog(currentViewingHouseId)">
+              <q-item-section avatar
+                ><q-avatar color="grey-3" text-color="secondary" icon="person_add"
+              /></q-item-section>
+              <q-item-section>Invite a user to this Household</q-item-section>
+            </q-item>
+
+            <q-item v-if="householdMembers.length === 0">
+              <q-item-section class="text-grey italic">No access data found.</q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            label="Close"
+            color="primary"
+            v-close-popup
+            no-caps
+            class="bg-grey-2"
+            rounded
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="showAddHouse">
       <q-card style="min-width: 350px">
-        <q-card-section><div class="text-h6">New Household</div></q-card-section>
+        <q-card-section class="bg-primary text-white q-mb-md">
+          <div class="text-h6">Create a new Household</div>
+        </q-card-section>
         <q-card-section class="q-gutter-md">
           <q-input v-model="newHouseData.name" label="House Name" outlined dense />
           <q-input v-model="newHouseData.address" label="Address" outlined dense />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="primary" label="Create" @click="createHouse" />
+          <q-btn flat no-caps label="Cancel" v-close-popup class="bg-grey-2" rounded />
+          <q-btn
+            color="primary"
+            flat
+            no-caps
+            label="Create"
+            @click="createHouse"
+            class="bg-grey-2"
+            rounded
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <q-dialog v-model="showEditHouseDialog">
       <q-card style="min-width: 350px">
-        <q-card-section><div class="text-h6">Rename Household</div></q-card-section>
+        <q-card-section class="bg-primary text-white q-mb-md">
+          <div class="text-h6">Rename Household</div>
+        </q-card-section>
         <q-card-section class="q-pt-none">
           <q-input
             v-model="editHouseData.name"
@@ -372,30 +396,49 @@
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="secondary" label="Save Changes" @click="updateHouse" />
+          <q-btn flat no-caps label="Cancel" v-close-popup class="bg-grey-2" rounded />
+          <q-btn
+            color="secondary"
+            flat
+            no-caps
+            label="Save Changes"
+            @click="updateHouse"
+            class="bg-grey-2"
+            rounded
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <q-dialog v-model="showDeleteHouseDialog">
       <q-card style="min-width: 350px">
-        <q-card-section><div class="text-h6">Delete Household</div></q-card-section>
+        <q-card-section class="bg-negative text-white q-mb-md">
+          <div class="text-h6">Delete Household</div>
+        </q-card-section>
         <q-card-section class="q-pt-none">
           Do you really want to delete this household? All its information, including rooms,
           devices, sensors, operation history and other data will be unrecoverably deleted. This
           cannot be undone.
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="negative" label="Delete permanently" @click="deleteHouse" />
+          <q-btn flat label="Cancel" v-close-popup no-caps class="bg-grey-2" rounded />
+          <q-btn
+            flat
+            color="negative"
+            label="Delete permanently"
+            @click="deleteHouse"
+            class="bg-red-1"
+            rounded
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <q-dialog v-model="showLeaveHouseDialog">
       <q-card style="min-width: 350px">
-        <q-card-section><div class="text-h6">Leave Household</div></q-card-section>
+        <q-card-section class="bg-negative text-white q-mb-md">
+          <div class="text-h6">Leave Household</div>
+        </q-card-section>
         <q-card-section class="q-pt-none">
           Do you really want to leave this household?
           <span v-if="!leaveHouseData.onlyOneAdmin">You can be re-invited by an admin.</span>
@@ -407,15 +450,17 @@
           </div>
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="negative" label="Leave" @click="leaveHouse" />
+          <q-btn flat label="Cancel" v-close-popup no-caps class="bg-grey-2" rounded />
+          <q-btn color="negative" label="Leave" @click="leaveHouse" flat class="bg-red-1" rounded />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <q-dialog v-model="showEditRoomDialog">
       <q-card style="min-width: 350px">
-        <q-card-section><div class="text-h6">Rename Room</div></q-card-section>
+        <q-card-section class="bg-primary text-white q-mb-md">
+          <div class="text-h6">Rename Room</div>
+        </q-card-section>
         <q-card-section class="q-pt-none">
           <q-input
             v-model="editRoomData.name"
@@ -427,29 +472,48 @@
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="secondary" label="Save Changes" @click="updateRoom" />
+          <q-btn flat label="Cancel" v-close-popup no-caps class="bg-grey-2" rounded />
+          <q-btn
+            color="secondary"
+            label="Save Changes"
+            @click="updateRoom"
+            no-caps
+            flat
+            class="bg-grey-2"
+            rounded
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <q-dialog v-model="showDeleteRoomDialog">
       <q-card style="min-width: 350px">
-        <q-card-section><div class="text-h6">Delete Room</div></q-card-section>
+        <q-card-section class="bg-negative text-white q-mb-md">
+          <div class="text-h6">Delete Room</div>
+        </q-card-section>
         <q-card-section class="q-pt-none">
           Do you really want to delete this room? All its information, including devices, sensors,
           operation history and other data will be deleted.
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="negative" label="Delete" @click="deleteRoom" />
+          <q-btn flat label="Cancel" v-close-popup no-caps class="bg-grey-2" rounded />
+          <q-btn
+            color="negative"
+            label="Delete"
+            @click="deleteRoom"
+            flat
+            class="bg-red-1"
+            rounded
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <q-dialog v-model="showEditDeviceDialog">
       <q-card style="min-width: 350px">
-        <q-card-section><div class="text-h6">Rename Device</div></q-card-section>
+        <q-card-section class="bg-primary text-white q-mb-md">
+          <div class="text-h6">Rename Device</div>
+        </q-card-section>
         <q-card-section class="q-pt-none">
           <q-input
             v-model="editDeviceData.name"
@@ -461,15 +525,25 @@
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="secondary" label="Save" @click="updateDevice" />
+          <q-btn flat label="Cancel" v-close-popup no-caps class="bg-grey-2" rounded />
+          <q-btn
+            color="secondary"
+            label="Save"
+            @click="updateDevice"
+            no-caps
+            flat
+            class="bg-grey-2"
+            rounded
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <q-dialog v-model="showAddRoom">
       <q-card style="min-width: 350px">
-        <q-card-section><div class="text-h6">New Room</div></q-card-section>
+        <q-card-section class="bg-primary text-white q-mb-md">
+          <div class="text-h6">New Room</div>
+        </q-card-section>
         <q-card-section class="q-gutter-md">
           <q-input v-model="newRoomData.name" label="Room Name" outlined dense />
           <q-select
@@ -485,15 +559,23 @@
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="primary" label="Create" @click="createRoom" />
+          <q-btn flat label="Cancel" v-close-popup no-caps class="bg-grey-2" rounded />
+          <q-btn
+            color="primary"
+            label="Create"
+            @click="createRoom"
+            no-caps
+            flat
+            class="bg-grey-2"
+            rounded
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <q-dialog v-model="showAddDevice">
       <q-card style="min-width: 350px">
-        <q-card-section class="row items-center">
+        <q-card-section class="row items-center q-mb-sm bg-primary text-white">
           <div class="text-h6">Add New Device</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
@@ -533,8 +615,12 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pb-md q-pr-md">
-          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat label="Cancel" no-caps v-close-popup class="bg-grey-2" rounded />
           <q-btn
+            rounded
+            flat
+            no-caps
+            class="bg-grey-2"
             color="secondary"
             label="Add Device"
             @click="createDevice"
@@ -558,7 +644,7 @@
 
           <q-select
             v-model="selectedUserToInvite"
-            :options="allUsers"
+            :options="filteredUsers"
             option-value="id"
             :option-label="(opt) => `${opt.name} ${opt.surname} (ID: ${opt.id})`"
             label="Search User"
@@ -567,6 +653,7 @@
             emit-value
             map-options
             use-input
+            @filter="filterInvites"
             input-debounce="0"
           >
             <template v-slot:no-option>
@@ -578,10 +665,14 @@
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup no-caps class="bg-grey-2" rounded />
           <q-btn
             color="primary"
             label="Invite"
+            no-caps
+            flat
+            class="bg-grey-2"
+            rounded
             @click="sendInvite"
             :disable="!selectedUserToInvite"
           />
@@ -591,7 +682,9 @@
 
     <q-dialog v-model="showDeleteAccountDialog">
       <q-card style="min-width: 350px">
-        <q-card-section><div class="text-h6">Delete Account</div></q-card-section>
+        <q-card-section class="bg-negative text-white q-mb-md">
+          <div class="text-h6">Delete Account</div>
+        </q-card-section>
         <q-card-section class="q-pt-none">
           Do you really want to delete your account? This cannot be undone.
         </q-card-section>
@@ -612,7 +705,6 @@
                   flat
                   dense
                   class="text-accent"
-                  v-close-popup
                   @click="openMemberList(house)"
                 />
               </q-item-section>
@@ -625,8 +717,15 @@
           </q-list>
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="negative" label="Delete your account" @click="deleteAccount" />
+          <q-btn flat label="Cancel" v-close-popup no-caps class="bg-grey-2" rounded />
+          <q-btn
+            color="negative"
+            label="Delete your account"
+            @click="deleteAccount"
+            flat
+            class="bg-red-1"
+            rounded
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -688,7 +787,7 @@
           <q-expansion-item
             label="What types of commands does this device support?"
             expand-separator
-            style="border-radius: 10px"
+            style="border-radius: 12px"
             class="bg-grey-2"
             v-model="allCombinationsAnimation"
           >
@@ -721,10 +820,10 @@
         </q-card-section>
 
         <q-card-section class="flex">
-          <q-btn flat label="Cancel" v-close-popup class="bg-grey-2" style="border-radius: 10px" />
+          <q-btn flat label="Cancel" v-close-popup class="bg-grey-2" rounded />
           <q-space />
           <q-btn
-            style="border-radius: 10px"
+            rounded
             color="secondary"
             label="Send"
             flat
@@ -1072,6 +1171,7 @@ const createDevice = async () => {
 // --- State for Invitations ---
 const showInviteDialog = ref(false)
 const allUsers = ref([]) // List of users to invite
+const filteredUsers = ref([])
 const selectedUserToInvite = ref(null)
 const targetHouseIdForInvite = ref(null)
 
@@ -1267,5 +1367,21 @@ const getLogColor = (log) => {
   if (log.beschreibung?.toLowerCase().includes('alarm')) return 'negative'
   if (log.nutzer_id) return 'primary'
   return 'secondary'
+}
+
+const filterInvites = (val, update) => {
+  if (val === '') {
+    update(() => {
+      filteredUsers.value = allUsers.value
+    })
+    return
+  }
+
+  update(() => {
+    const needle = val.toLowerCase()
+    filteredUsers.value = allUsers.value.filter(
+      (v) => (v.name + ' ' + v.surname).toLowerCase().indexOf(needle) > -1,
+    )
+  })
 }
 </script>
