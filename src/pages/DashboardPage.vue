@@ -151,6 +151,9 @@
                                 ? device.latestoperationtype + ' ' + device.lateststatename
                                 : 'Unknown State'
                             }}
+                            <span v-for="sensor in device.sensors" :key="sensor.id">
+                              - {{ sensor.sensorType }}: {{ sensor.value }}
+                            </span>
                             - Connected via {{ device.interfacename }}</q-item-label
                           >
                         </q-item-section>
@@ -820,13 +823,14 @@
         </q-card-section>
 
         <q-card-section class="flex">
-          <q-btn flat label="Cancel" v-close-popup class="bg-grey-2" rounded />
+          <q-btn flat label="Cancel" no-caps v-close-popup class="bg-grey-2" rounded />
           <q-space />
           <q-btn
             rounded
             color="secondary"
             label="Send"
             flat
+            no-caps
             class="bg-grey-2"
             @click="createOperation"
             :disable="!newOperationData.type_id || !newOperationData.state_id"

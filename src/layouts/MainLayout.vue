@@ -47,17 +47,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import { useUserStore } from 'src/stores/user-store'
 import { useRouter } from 'vue-router'
-
-const leftDrawerOpen = ref(false)
 const userStore = useUserStore()
 const router = useRouter()
-
-function toggleLeftDrawer() {
-  leftDrawerOpen.value = !leftDrawerOpen.value
-}
 
 const logout = () => {
   userStore.logout()

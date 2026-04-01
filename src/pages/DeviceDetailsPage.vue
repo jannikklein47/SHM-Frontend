@@ -7,6 +7,16 @@
       @deleted="$router.back()"
     />
 
+    <q-btn
+      class="bg-grey-2 q-ma-md"
+      no-caps
+      icon="add"
+      label="Send a Command"
+      flat
+      rounded
+      @click="showAddOperationDialog = true"
+    />
+
     <div class="q-mt-xl">
       <div class="row items-center justify-between q-mb-md">
         <div class="text-h5">Installed Sensors</div>
@@ -147,21 +157,6 @@
                 </q-td>
               </template>
             </q-table>
-
-            <div class="q-mt-xl">
-              <div class="row items-center justify-between q-mb-md">
-                <q-space />
-                <q-btn
-                  class="q-mr-md bg-grey-2"
-                  no-caps
-                  icon="add"
-                  label="Add Operation"
-                  flat
-                  rounded
-                  @click="showAddOperationDialog = true"
-                />
-              </div>
-            </div>
 
             <q-dialog
               v-model="showAddOperationDialog"
