@@ -138,7 +138,8 @@
                         clickable
                         v-for="device in room.devices"
                         :key="device.id"
-                        class="rounded-borders q-my-xs bg-grey-1"
+                        class="rounded-borders q-my-xs device-item"
+                        :id="'device-' + device.id"
                       >
                         <q-item-section avatar>
                           <q-icon :name="device.icon" color="accent" />
@@ -842,7 +843,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import { api } from 'boot/axios'
 import { useRouter } from 'vue-router'
 import { useUserStore } from 'stores/user-store'
@@ -976,6 +977,65 @@ const fetchDashboardData = async () => {
     console.error(err)
   } finally {
     loading.value = false
+  }
+}
+
+const checkForUpdates = async () => {
+  try {
+    for (const house of households.value) {
+      const oldDevices = {}
+      for (const room of house.rooms) {
+        for (const device of room.devices) {
+          oldDevices[device.id] = device
+        }
+      }
+      const newDeviceData = (await api.get('/device/household/' + house.id)).data
+      const newDevices = {}
+      for (const device of newDeviceData) {
+        newDevices[device.id] = device
+      }
+
+      //console.log('Old devices:', oldDevices)
+      //console.log('New devices:', newDevices)
+
+      for (const [id, newDevice] of Object.entries(newDevices)) {
+        const oldDevice = oldDevices[id]
+
+        if (oldDevice) {
+          const oldSensors = {}
+          const newSensors = {}
+          for (const sensor of oldDevice.sensors) {
+            oldSensors[sensor.sensorId] = sensor
+          }
+          for (const sensor of newDevice.sensors) {
+            newSensors[sensor.sensorId] = sensor
+          }
+
+          for (const [sensorId, newSensor] of Object.entries(newSensors)) {
+            const oldSensor = oldSensors[sensorId]
+            if (oldSensor) {
+              if (oldSensor.value !== newSensor.value) {
+                try {
+                  document
+                    .getElementById('device-' + newSensor.deviceId)
+                    .classList.add('animate-sensor')
+                  setTimeout(() => {
+                    document
+                      .getElementById('device-' + newSensor.deviceId)
+                      .classList.remove('animate-sensor')
+                  }, 1000)
+                } catch (error) {
+                  console.error(error)
+                }
+              }
+              oldSensor.value = newSensor.value
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error(error)
   }
 }
 
@@ -1352,9 +1412,15 @@ const createOperation = async () => {
   }
 }
 
-onMounted(() => {
-  fetchTypes()
-  fetchDashboardData()
+let updateInterval = null
+onMounted(async () => {
+  await fetchTypes()
+  await fetchDashboardData()
+  updateInterval = setInterval(checkForUpdates, 1000)
+})
+
+onBeforeUnmount(() => {
+  clearInterval(updateInterval)
 })
 
 const formatDate = (ts) => date.formatDate(ts, 'MM.DD.YYYY, HH:mm:ss')
@@ -1389,3 +1455,26 @@ const filterInvites = (val, update) => {
   })
 }
 </script>
+
+<style scoped lang="scss">
+@keyframes pulse {
+  0% {
+    background-color: #fafafa;
+  }
+  50% {
+    background-color: var(--q-secondary);
+  }
+  100% {
+    background-color: #fafafa;
+  }
+}
+
+.device-item {
+  background-color: #fafafa;
+}
+
+.animate-sensor {
+  animation: pulse 0.7s forwards;
+  animation-timing-function: ease-out;
+}
+</style>
