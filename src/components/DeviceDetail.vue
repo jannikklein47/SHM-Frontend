@@ -95,7 +95,9 @@
 
   <q-dialog v-model="showEditDeviceDialog">
     <q-card style="min-width: 350px">
-      <q-card-section><div class="text-h6">Rename Device</div></q-card-section>
+      <q-card-section class="bg-primary text-white q-mb-md">
+        <div class="text-h6">Rename Device</div>
+      </q-card-section>
       <q-card-section class="q-pt-none">
         <q-input
           v-model="editDeviceData.name"
@@ -107,22 +109,39 @@
         />
       </q-card-section>
       <q-card-actions align="right">
-        <q-btn flat label="Cancel" v-close-popup />
-        <q-btn color="secondary" label="Save new name" @click="updateDevice" />
+        <q-btn flat label="Cancel" v-close-popup no-caps class="bg-grey-2" rounded />
+        <q-btn
+          color="secondary"
+          flat
+          no-caps
+          class="bg-grey-2"
+          label="Save new name"
+          @click="updateDevice"
+          rounded
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
 
   <q-dialog v-model="showDeleteDeviceDialog">
     <q-card style="min-width: 350px">
-      <q-card-section><div class="text-h6">Delete Device</div></q-card-section>
+      <q-card-section class="bg-negative text-white q-mb-md"
+        ><div class="text-h6">Delete Device</div></q-card-section
+      >
       <q-card-section class="q-pt-none">
         Do you really want to delete this device? All its information, including sensors, operation
         history and other data will be deleted.
       </q-card-section>
       <q-card-actions align="right">
-        <q-btn flat label="Cancel" v-close-popup />
-        <q-btn color="negative" label="Delete" @click="deleteDevice" />
+        <q-btn flat label="Cancel" v-close-popup no-caps class="bg-grey-2" rounded />
+        <q-btn
+          color="negative"
+          label="Delete"
+          @click="deleteDevice"
+          flat
+          rounded
+          class="bg-red-1"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>

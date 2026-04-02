@@ -12,8 +12,17 @@ const routes = [
         },
       },
       {
+        path: 'register',
+        component: () => import('pages/RegisterPage.vue'),
+        name: 'register',
+        meta: {
+          guestOnly: true,
+        },
+      },
+      {
         path: 'dashboard',
         component: () => import('pages/DashboardPage.vue'),
+        name: 'Dashboard',
         meta: {
           requiresAuth: true,
         },
@@ -21,10 +30,12 @@ const routes = [
       {
         path: 'device/:id',
         component: () => import('pages/DeviceDetailsPage.vue'),
+        name: 'Device Details',
         meta: { requiresAuth: true },
       },
       {
         path: 'profile',
+        name: 'Profile',
         component: () => import('pages/ProfilePage.vue'),
         meta: { requiresAuth: true },
       },
